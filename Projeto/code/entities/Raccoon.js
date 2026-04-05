@@ -59,15 +59,24 @@ class Raccoon {
             };
 
             Promise.all([
-                loadAnim('idle', 'Wobbling.fbx'),
+                loadAnim('idle', 'Idle.fbx'),
+                loadAnim('wobble', 'Wobbling.fbx'),
                 loadAnim('walk', 'Female Walk.fbx'),
                 loadAnim('run', 'Fast Run.fbx'),
+                loadAnim('run_left', 'Running Left Turn.fbx'),
+                loadAnim('run_right', 'Running Right Turn.fbx'),
+                loadAnim('jump', 'Jumping.fbx'),
                 loadAnim('sit', 'Stand To Sit.fbx'),
-                loadAnim('stand', 'Sit To Stand.fbx')
+                loadAnim('stand', 'Sit To Stand.fbx'),
+                loadAnim('terrified', 'Terrified.fbx')
             ]).then(() => {
-                if (this.actions['idle']) {
-                     this.activeAction = this.actions['idle'];
+                // Iniciar sentado, conforme solicitado
+                this.currentState = 'SITTING';
+                if (this.actions['sit']) {
+                     this.activeAction = this.actions['sit'];
                      this.activeAction.play();
+                     this.activeAction.paused = true;
+                     this.activeAction.time = this.activeAction.getClip().duration;
                 }
                 if (resolve) resolve();
             });
@@ -101,11 +110,34 @@ class Raccoon {
 
         const isMoving = keyStates.w || keyStates.s || keyStates.a || keyStates.d;
         const isRunning = isMoving && keyStates.shift;
+        const isJumping = keyStates.space;
 
+        // Se houver qualquer input, resetamos o timer de AFK
+        if (isMoving || isJumping) {
+            this.idleTimer = 0;
+        }
+
+        // --- SISTEMA DE ESTADOS ---
+        
+        // 1. Saltando
+        if (isJumping && this.currentState !== 'JUMP' && this.currentState !== 'SITTING' && this.currentState !== 'SITTING_DOWN' && this.currentState !== 'STANDING_UP') {
+            this.currentState = 'JUMP';
+            this.fadeToAction('jump', 0.1);
+            
+            const onJumpFinished = (e) => {
+                if (e.action === this.actions['jump']) {
+                    this.currentState = 'IDLE';
+                    this.mixer.removeEventListener('finished', onJumpFinished);
+                }
+            };
+            this.mixer.addEventListener('finished', onJumpFinished);
+        }
+
+        // 2. Sentando/Levantando
         if (this.currentState === 'SITTING') {
-            if (isMoving) {
+            if (isMoving || isJumping) {
                 this.currentState = 'STANDING_UP';
-                this.fadeToAction('stand', 0.8);
+                this.fadeToAction('stand', 0.5);
                 
                 const onFinished = (e) => {
                     if (e.action === this.actions['stand']) {
@@ -115,50 +147,76 @@ class Raccoon {
                 };
                 this.mixer.addEventListener('finished', onFinished);
             }
-        } else if (this.currentState === 'STANDING_UP' || this.currentState === 'SITTING_DOWN') {
-            // Bloqueia movimento durante transições
-        } else {
-            if (isMoving) {
-                this.idleTimer = 0;
-                
-                const moveSpeed = (isRunning ? 15 : 6) * delta * 0.1; 
-                const rotateSpeed = 2 * delta;
+            return; // Bloqueia movimento enquanto sentado
+        }
 
-                if (keyStates.w) this.model.translateZ(moveSpeed);
-                if (keyStates.s) this.model.translateZ(-moveSpeed);
-                if (keyStates.a) this.model.rotateY(rotateSpeed);
-                if (keyStates.d) this.model.rotateY(-rotateSpeed);
-                
-                if (isRunning) {
+        if (this.currentState === 'STANDING_UP' || this.currentState === 'SITTING_DOWN' || this.currentState === 'JUMP') {
+            return; // Bloqueia input durante transições críticas ou salto
+        }
+
+        // 3. Movimento Ativo
+        if (isMoving) {
+            this.idleTimer = 0;
+            const moveSpeed = (isRunning ? 15 : 6) * delta * 0.1; 
+            const rotateSpeed = 2.5 * delta;
+
+            if (keyStates.w) this.model.translateZ(moveSpeed);
+            if (keyStates.s) this.model.translateZ(-moveSpeed);
+            if (keyStates.a) this.model.rotateY(rotateSpeed);
+            if (keyStates.d) this.model.rotateY(-rotateSpeed);
+
+            if (isRunning) {
+                // Curvas durante a corrida
+                if (keyStates.a) {
+                    if (this.currentState !== 'RUN_LEFT') {
+                        this.fadeToAction('run_left', 0.2);
+                        this.currentState = 'RUN_LEFT';
+                    }
+                } else if (keyStates.d) {
+                    if (this.currentState !== 'RUN_RIGHT') {
+                        this.fadeToAction('run_right', 0.2);
+                        this.currentState = 'RUN_RIGHT';
+                    }
+                } else {
                     if (this.currentState !== 'RUN') {
                         this.fadeToAction('run', 0.2);
                         this.currentState = 'RUN';
                     }
-                } else {
-                    if (this.currentState !== 'WALK') {
-                        this.fadeToAction('walk', 0.2);
-                        this.currentState = 'WALK';
-                    }
                 }
+                this.lastMoveState = 'RUN';
             } else {
-                if (this.currentState !== 'IDLE') {
-                    this.fadeToAction('idle', 0.2);
-                    this.currentState = 'IDLE';
+                if (this.currentState !== 'WALK') {
+                    this.fadeToAction('walk', 0.2);
+                    this.currentState = 'WALK';
                 }
+                this.lastMoveState = 'WALK';
+            }
+        } 
+        // 4. Parado (AFK Logic)
+        else {
+            if (this.currentState !== 'IDLE' && this.currentState !== 'WOBBLE') {
+                // Escolher entre wobble (cansado) ou idle (calmo)
+                const targetAnim = (this.lastMoveState === 'RUN') ? 'wobble' : 'idle';
+                this.fadeToAction(targetAnim, 0.3);
+                this.currentState = targetAnim.toUpperCase();
+            }
 
-                this.idleTimer += delta;
-                if (this.idleTimer > 2.0) {
-                    this.currentState = 'SITTING_DOWN';
-                    this.fadeToAction('sit', 0.5);
-                    
-                    const onFinished = (e) => {
-                        if (e.action === this.actions['sit']) {
-                            this.currentState = 'SITTING';
-                            this.mixer.removeEventListener('finished', onFinished);
-                        }
-                    };
-                    this.mixer.addEventListener('finished', onFinished);
-                }
+            this.idleTimer += delta;
+            
+            // Sentar apenas se estiver AFK por algum tempo (ex: 5 segundos)
+            // Ou se a animação de Wobble/Idle terminar (como pediste)
+            if (this.idleTimer > 5.0) {
+                this.currentState = 'SITTING_DOWN';
+                this.fadeToAction('sit', 0.8);
+                
+                const onSitFinished = (e) => {
+                    if (e.action === this.actions['sit']) {
+                        this.currentState = 'SITTING';
+                        this.lastMoveState = null;
+                        this.mixer.removeEventListener('finished', onSitFinished);
+                    }
+                };
+                this.mixer.addEventListener('finished', onSitFinished);
             }
         }
     }
