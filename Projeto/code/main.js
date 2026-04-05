@@ -21,18 +21,22 @@ renderer.shadowMap.enabled = true;
 const canvasParent = document.getElementById('Tag3DScene');
 canvasParent.appendChild(renderer.domElement);
 
-// Controlo de órbita para debugging
+// Controlo de órbita para debugging e interação
 const orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.enableDamping = true;
 orbitControls.dampingFactor = 0.1;
 orbitControls.enablePan = false;
+orbitControls.minDistance = 0.5; // Não entrar no guaxinim
+orbitControls.maxDistance = 5.0; // Não afastar demasiado
+orbitControls.minPolarAngle = Math.PI / 6; // Não olhar demasiado de cima
+orbitControls.maxPolarAngle = Math.PI / 1.5; // Não olhar demasiado de baixo (chão)
 orbitControls.target.set(0, 0, 0);
 
 // Guaxinim e câmara de terceira pessoa
 const raccoon = new Raccoon(scene);
 // Passamos o modelo do guaxinim para a câmara depois de carregado
 raccoon.modelLoaded.then(() => {
-    const thirdPersonCamera = new ThirdPersonCamera(camera, raccoon.model, renderer.domElement);
+    const thirdPersonCamera = new ThirdPersonCamera(camera, raccoon.model, renderer.domElement, orbitControls);
     
     const clock = new THREE.Clock();
 
