@@ -6,12 +6,10 @@ class ThirdPersonCamera {
         this.target = target;
         this.isInteracting = false;
         
-        // Offset mais baixo e curto (visão ao nível do chão/guaxinim)
-        // x: ombro, y: altura (mais baixo), z: profundidade
-        this.defaultOffsetDirection = new THREE.Vector3(0.2, 0.15, -0.6).normalize();
-        this.lookAtOffset = new THREE.Vector3(0, 0.18, 0); // Foco ligeiramente acima para apanhar o horizonte
+        // Offset mais baixo e curto
+        this.defaultOffsetDirection = new THREE.Vector3(0.2, 0.12, -0.6).normalize();
+        this.lookAtOffset = new THREE.Vector3(0, 0.15, 0); 
 
-        // Distância default fixa (não persiste mais o zoom)
         this.defaultDistance = 0.55; 
         this.lastTargetPosition = new THREE.Vector3();
         if (target) this.lastTargetPosition.copy(target.position);
@@ -24,14 +22,15 @@ class ThirdPersonCamera {
             setTimeout(() => { this.isInteracting = false; }, 100);
         });
 
-        // Capturar wheel para zoom
-        domElement.addEventListener('wheel', () => {
+        // Capturar wheel para zoom de forma mais agressiva
+        const onWheel = () => {
             this.isInteracting = true;
             clearTimeout(this.wheelTimeout);
             this.wheelTimeout = setTimeout(() => {
                 this.isInteracting = false;
-            }, 500);
-        }, { passive: true });
+            }, 600); // 600ms para dar tempo ao utilizador de lerpar se quiser, mas aqui só para ignorar auto-follow
+        };
+        domElement.addEventListener('wheel', onWheel, { passive: true });
     }
 
     update(isMoving, orbitControls) {
@@ -39,7 +38,7 @@ class ThirdPersonCamera {
 
         const targetPos = this.target.position.clone().add(this.lookAtOffset);
         
-        // Sincronização direta de posição
+        // Sincronização direta de posição (sempre, para não "desprender")
         const deltaMove = this.target.position.clone().sub(this.lastTargetPosition);
         this.camera.position.add(deltaMove);
         this.lastTargetPosition.copy(this.target.position);
@@ -47,18 +46,23 @@ class ThirdPersonCamera {
         // Atualizar o alvo dos controlos sempre
         orbitControls.target.copy(targetPos);
 
-        // Regras de retorno (Fase 4): 
-        // Se NÃO estivermos a interagir, voltamos para a posição default e para o zoom default suavemente
+        // REGRA DE RETORNO (Fase 5):
+        // Só forçamos o regresso à posição/zoom default se:
+        // 1. O utilizador NÃO estiver a mexer no mouse (isInteracting == false)
+        // 2. O personagem ESTIVER a mover-se (isMoving == true)
         
-        if (!this.isInteracting) {
+        if (!this.isInteracting && isMoving) {
             const idealOffset = this.defaultOffsetDirection.clone().applyQuaternion(this.target.quaternion);
             const idealPosition = targetPos.clone().add(idealOffset.multiplyScalar(this.defaultDistance));
 
-            // Lerp para posição e zoom (mais rápido se estiver a mover)
-            const lerpFactor = (isMoving || this.camera.position.distanceTo(idealPosition) > 1.0) ? 0.1 : 0.05;
-            this.camera.position.lerp(idealPosition, lerpFactor);
+            // Lerp para posição e zoom
+            this.camera.position.lerp(idealPosition, 0.1);
             
             // Suavizar o foco
+            this.camera.lookAt(targetPos);
+        } else if (!this.isInteracting) {
+            // Se estivermos parados e sem usar o mouse, apenas garantimos que olha para o guaxinim
+            // Mas não forçamos a posição (mantendo o zoom/rotação manual)
             this.camera.lookAt(targetPos);
         }
     }
