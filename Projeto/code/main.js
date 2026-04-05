@@ -18,7 +18,8 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
-document.getElementById('Tag3DScene').appendChild(renderer.domElement);
+const canvasParent = document.getElementById('Tag3DScene');
+canvasParent.appendChild(renderer.domElement);
 
 // Controlo de órbita para debugging
 const orbitControls = new OrbitControls(camera, renderer.domElement);
@@ -31,7 +32,7 @@ orbitControls.target.set(0, 0, 0);
 const raccoon = new Raccoon(scene);
 // Passamos o modelo do guaxinim para a câmara depois de carregado
 raccoon.modelLoaded.then(() => {
-    const thirdPersonCamera = new ThirdPersonCamera(camera, raccoon.model);
+    const thirdPersonCamera = new ThirdPersonCamera(camera, raccoon.model, renderer.domElement);
     
     const clock = new THREE.Clock();
 
@@ -44,11 +45,11 @@ raccoon.modelLoaded.then(() => {
         // Atualizar a lógica do guaxinim (animações e movimento)
         raccoon.update(delta, keyStates);
 
-        // Atualizar a câmara
+        // Atualizar a câmara de terceira pessoa
         thirdPersonCamera.update(isMoving, orbitControls);
 
-        // Atualizar os controlos de órbita se não estiver a mover
-        if (!isMoving) {
+        // Atualizar os controlos de órbita apenas se houver interação manual
+        if (thirdPersonCamera.isInteracting) {
             orbitControls.update();
         }
 
