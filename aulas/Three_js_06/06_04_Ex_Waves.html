@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!--
+
+		J. Madeira - March 2026
+        Based on an example created with the help of Google Gemini
+
+-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Three.js - Vertex Manipulation Lab</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050505;
+        }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #00ffcc;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 1px solid #00ffcc;
+            pointer-events: none;
+        }
+    </style>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://threejs.org/build/three.module.js",
+            "three/addons/": "https://threejs.org/examples/jsm/"
+          }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from "three";
+        import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+        const sceneElements = {
+            sceneGraph: null, camera: null, renderer: null, control: null,
+            mesh: null,
+            originalPositions: null // To store the base shape
+        };
+
+        const helper = {
+            initEmptyScene: function (elements) {
+                elements.sceneGraph = new THREE.Scene();
+                elements.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
+                elements.camera.position.set(15, 10, 15);
+
+                const light = new THREE.DirectionalLight(0xffffff, 2);
+                light.position.set(5, 10, 7);
+                elements.sceneGraph.add(light);
+                elements.sceneGraph.add(new THREE.AmbientLight(0xffffff, 0.3));
+
+                elements.renderer = new THREE.WebGLRenderer({ antialias: true });
+                elements.renderer.setSize(window.innerWidth, window.innerHeight);
+                document.body.appendChild(elements.renderer.domElement);
+                elements.control = new OrbitControls(elements.camera, elements.renderer.domElement);
+            },
+            render: function (elements) {
+                elements.renderer.render(elements.sceneGraph, elements.camera);
+            }
+        };
+
+        const scene = {
+            load3DObjects: function (sceneGraph) {
+                // 1. Create a heavily subdivided plane (Topology)
+                const geometry = new THREE.PlaneGeometry(10, 10, 20, 20);
+                geometry.rotateX(-Math.PI / 2); // Lay it flat
+
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0x0066ff,
+                    wireframe: true, // Wireframe helps see the topology stay intact
+                    side: THREE.DoubleSide
+                });
+
+                sceneElements.mesh = new THREE.Mesh(geometry, material);
+                sceneGraph.add(sceneElements.mesh);
+
+                // 2. Store original positions to calculate offsets
+                sceneElements.originalPositions = new Float32Array(geometry.attributes.position.array);
+            }
+        };
+
+        let time = 0;
+        function computeFrame() {
+            time += 0.05;
+
+            const geometry = sceneElements.mesh.geometry;
+            const positionAttribute = geometry.attributes.position;
+
+            // VERTEX DEFORMATION
+            for (let i = 0; i < positionAttribute.count; i++) {
+                // Get the original X and Z to calculate the "wave"
+                const x = sceneElements.originalPositions[i * 3];
+                const z = sceneElements.originalPositions[i * 3 + 2];
+
+                // 1. Calculate a new Y based on a Sine wave and Cosine wave
+                // 2. Experiment with: Math.sin(x + time) or Math.cos(z + time)
+                const newY = Math.sin(x + time) * 0.5 + Math.cos(z + time) * 0.5;
+
+                // 2. Update the Y position attribute
+                positionAttribute.setY(i, newY);
+            }
+
+            // CRITICAL: Tell Three.js the positions have changed
+            positionAttribute.needsUpdate = true;
+
+            // Recalculate normals so lighting looks correct on the wave
+            geometry.computeVertexNormals();
+
+            helper.render(sceneElements);
+            requestAnimationFrame(computeFrame);
+        }
+
+        function init() {
+            helper.initEmptyScene(sceneElements);
+            scene.load3DObjects(sceneElements.sceneGraph);
+            computeFrame();
+        }
+
+        init();
+    </script>
+</head>
+
+<body>
+    <div id="ui">
+        <b>Vertex Deformation</b><br>
+        1. Notice how the triangles stretch but don't break.<br>
+        2. 'positionAttribute.needsUpdate = true' is required.<br>
+        3. Try changing the wave math in the loop!
+    </div>
+</body>
+
+</html>

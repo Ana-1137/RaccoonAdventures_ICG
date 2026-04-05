@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Three.js with Real-time GUI</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="Tag3DScene"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://threejs.org/build/three.module.js",
+                "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import GUI from 'lil-gui';
+
+        const sceneElements = {
+            sceneGraph: null,
+            camera: null,
+            renderer: null,
+            spotLight: null,
+            robot: null
+        };
+
+        // 1. Define the parameters for the GUI
+        const guiParams = {
+            lightIntensity: 40,
+            lightColor: '#ffffff',
+            robotY: 0,
+            robotRotationSpeed: 0.01,
+            showAxes: true
+        };
+
+        const helper = {
+            init: function (elements) {
+                elements.sceneGraph = new THREE.Scene();
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+
+                elements.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 500);
+                elements.camera.position.set(20, 20, 20);
+                elements.camera.lookAt(0, 5, 0);
+
+                elements.renderer = new THREE.WebGLRenderer({ antialias: true });
+                elements.renderer.setSize(width, height);
+                elements.renderer.shadowMap.enabled = true;
+                document.querySelector("#Tag3DScene").appendChild(elements.renderer.domElement);
+
+                // Lighting
+                elements.spotLight = new THREE.SpotLight(guiParams.lightColor, guiParams.lightIntensity);
+                elements.spotLight.position.set(-10, 20, 10);
+                elements.spotLight.castShadow = true;
+                elements.sceneGraph.add(elements.spotLight);
+                elements.sceneGraph.add(new THREE.AmbientLight(0xffffff, 0.2));
+
+                // Helpers
+                const axes = new THREE.AxesHelper(10);
+                axes.name = "axesHelper";
+                elements.sceneGraph.add(axes);
+            }
+        };
+
+        const scene = {
+            loadRobot: function (sceneGraph) {
+                const group = new THREE.Group();
+                const mat = new THREE.MeshPhongMaterial({ color: 0x95a5a6 });
+
+                const torso = new THREE.Mesh(new THREE.BoxGeometry(4, 6, 2), mat);
+                torso.position.y = 5;
+                torso.castShadow = true;
+                group.add(torso);
+
+                const head = new THREE.Mesh(new THREE.SphereGeometry(1.5), mat);
+                head.position.y = 9;
+                head.castShadow = true;
+                group.add(head);
+
+                sceneGraph.add(group);
+                sceneElements.robot = group;
+
+                // Ground
+                const plane = new THREE.Mesh(
+                    new THREE.PlaneGeometry(50, 50),
+                    new THREE.MeshPhongMaterial({ color: 0xeeeeee })
+                );
+                plane.rotation.x = -Math.PI / 2;
+                plane.receiveShadow = true;
+                sceneGraph.add(plane);
+            }
+        };
+
+        // 2. Setup the GUI
+        function setupGUI() {
+            const gui = new GUI();
+
+            const lightFolder = gui.addFolder('Light Settings');
+            lightFolder.add(guiParams, 'lightIntensity', 0, 200).name('Intensity').onChange(value => {
+                sceneElements.spotLight.intensity = value;
+            });
+            lightFolder.addColor(guiParams, 'lightColor').name('Color').onChange(value => {
+                sceneElements.spotLight.color.set(value);
+            });
+
+            const robotFolder = gui.addFolder('Robot Settings');
+            robotFolder.add(guiParams, 'robotY', -5, 10).name('Vertical Pos').onChange(value => {
+                sceneElements.robot.position.y = value;
+            });
+            robotFolder.add(guiParams, 'robotRotationSpeed', 0, 0.1).name('Spin Speed');
+
+            gui.add(guiParams, 'showAxes').name('Show Axes').onChange(value => {
+                sceneElements.sceneGraph.getObjectByName("axesHelper").visible = value;
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Apply parameters that change over time
+            if (sceneElements.robot) {
+                sceneElements.robot.rotation.y += guiParams.robotRotationSpeed;
+            }
+
+            sceneElements.renderer.render(sceneElements.sceneGraph, sceneElements.camera);
+        }
+
+        helper.init(sceneElements);
+        scene.loadRobot(sceneElements.sceneGraph);
+        setupGUI();
+        animate();
+    </script>
+</body>
+
+</html>

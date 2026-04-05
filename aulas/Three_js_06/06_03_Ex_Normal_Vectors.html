@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!--
+
+		J. Madeira - March 2026
+        Based on an example created with the help of Google Gemini
+
+-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Three.js - Manual Normals Lab</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111111;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #00ffcc;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 1px solid #00ffcc;
+        }
+    </style>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://threejs.org/build/three.module.js",
+            "three/addons/": "https://threejs.org/examples/jsm/"
+          }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from "three";
+        import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+        import { VertexNormalsHelper } from "three/addons/helpers/VertexNormalsHelper.js";
+
+        const sceneElements = {
+            sceneGraph: null, camera: null, renderer: null, control: null
+        };
+
+        const helper = {
+            initEmptyScene: function (elements) {
+                elements.sceneGraph = new THREE.Scene();
+                elements.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
+                elements.camera.position.set(12, 12, 12);
+
+                // Strong directional light to test the normals
+                const light = new THREE.DirectionalLight(0xffffff, 2);
+                light.position.set(5, 10, 7);
+                elements.sceneGraph.add(light);
+                elements.sceneGraph.add(new THREE.AmbientLight(0xffffff, 0.2));
+
+                elements.renderer = new THREE.WebGLRenderer({ antialias: true });
+                elements.renderer.setSize(window.innerWidth, window.innerHeight);
+                document.body.appendChild(elements.renderer.domElement);
+
+                elements.control = new OrbitControls(elements.camera, elements.renderer.domElement);
+            },
+            render: function (elements) {
+                elements.renderer.render(elements.sceneGraph, elements.camera);
+            }
+        };
+
+        const scene = {
+            load3DObjects: function (sceneGraph) {
+                const geo = new THREE.BufferGeometry();
+
+                // 1. POSITION DATA (A long box: 8 units wide, 2 units high, 2 units deep)
+                // We use 24 vertices (6 faces * 4 vertices) for "Flat Shading" look
+                const vertices = new Float32Array([
+                    // Front face (Z = 1)
+                    -4, -1, 1, 4, -1, 1, 4, 1, 1, -4, 1, 1,
+                    // Back face (Z = -1)
+                    -4, -1, -1, -4, 1, -1, 4, 1, -1, 4, -1, -1,
+
+                    // Top face (Y = 1)
+                    -4, 1, -1, -4, 1, 1, 4, 1, 1, 4, 1, -1,
+                    // Bottom face (Y = -1)
+                    -4, -1, -1, 4, -1, -1, 4, -1, 1, -4, -1, 1,
+
+                    // Right face (X = 4)
+                    4, -1, -1, 4, 1, -1, 4, 1, 1, 4, -1, 1,
+                    // Left face (X = -4)
+                    -4, -1, -1, -4, -1, 1, -4, 1, 1, -4, 1, -1
+                ]);
+
+                // 2. INDEX DATA (12 triangles)
+                const indices = [
+                    0, 1, 2, 0, 2, 3,    // Front
+                    4, 5, 6, 4, 6, 7,    // Back
+                    8, 9, 10, 8, 10, 11,  // Top
+                    12, 13, 14, 12, 14, 15, // Bottom
+                    16, 17, 18, 16, 18, 19, // Right
+                    20, 21, 22, 20, 22, 23  // Left
+                ];
+
+                // 3. THE CHALLENGE: MANUAL NORMALS
+                // Set 24 vectors (one for each vertex)
+                // Currently set to 0,0,0 (Rendered as black/unlit)
+                const normals = new Float32Array([
+                    // Front: points towards +Z
+                    0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+                    // Back: points towards -Z
+                    0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1,
+                    // Top: points towards +Y
+                    0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
+                    // Bottom: points towards -Y
+                    0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0,
+                    // Right: points towards +X
+                    1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
+                    // Left: points towards -X
+                    -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0
+                ]);
+
+                // Setting the mesh (buffer geometry) attributes
+                // Vertex positions
+                geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                // Face Normals associated with each vertex
+                geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+                // Vertex indices defining the mesh triangles
+                geo.setIndex(indices);
+
+                const mat = new THREE.MeshPhongMaterial({ color: 0x00ffcc });
+                const box = new THREE.Mesh(geo, mat);
+                sceneGraph.add(box);
+
+                // grid para ajudar a perceber a orientação
+                const grid = new THREE.GridHelper(20, 20, 0x444444, 0x222222);
+                sceneGraph.add(grid);
+
+                // Add VertexNormalHelper to visualize the normal vectors
+                const vertexNormalsHelper = new VertexNormalsHelper(box, 0.5, 0xff0000);
+                sceneGraph.add(vertexNormalsHelper);
+            }
+        };
+
+        function computeFrame() {
+            helper.render(sceneElements);
+            requestAnimationFrame(computeFrame);
+        }
+
+        function init() {
+            helper.initEmptyScene(sceneElements);
+            scene.load3DObjects(sceneElements.sceneGraph);
+            computeFrame();
+        }
+
+        init();
+    </script>
+</head>
+
+<body>
+    <div id="overlay">
+        <b>Adding Normal Vectors one by one</b><br>
+        1. Notice the box is dark (No Normals).<br>
+        2. Fill the 'normals' array with unit vectors.<br>
+        3. E.g., Front face vertices should be [0, 0, 1].<br>
+        4. Create a VertexNormalsHelper to visualize the normal vectors.
+    </div>
+</body>
+
+</html>

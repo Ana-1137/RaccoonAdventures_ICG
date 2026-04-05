@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<!--
+
+		J. Madeira - April 2021; Updated - March 2024
+
+-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title> 3D scene </title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://threejs.org/build/three.module.js",
+            "three/addons/": "https://threejs.org/examples/jsm/"
+          }
+        }
+      </script>
+
+    <script type="module">
+
+        import * as THREE from "three";
+
+        import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+        // To store the scene graph, and elements usefull to rendering the scene
+        const sceneElements = {
+            sceneGraph: null,
+            camera: null,
+            control: null,  // NEW
+            renderer: null,
+            lightSources: {} // TASK1.2.2 - Store light sources
+        };
+
+        // HELPER FUNCTIONS
+
+        const helper = {
+
+            initEmptyScene: function (sceneElements) {
+
+                // ************************** //
+                // Create the 3D scene
+                // ************************** //
+                sceneElements.sceneGraph = new THREE.Scene();
+
+                // ************************** //
+                // Add camera
+                // ************************** //
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 500);
+                sceneElements.camera = camera;
+                camera.position.set(0, 5, 5);
+                camera.lookAt(0, 0, 0);
+
+                // ************************** //
+                // Illumination
+                // ************************** //
+
+                // ************************** //
+                // Add ambient light
+                // ************************** //
+                const ambientLight = new THREE.AmbientLight('rgb(255, 255, 255)', 0.2);
+                sceneElements.sceneGraph.add(ambientLight);
+
+                // ***************************** //
+                // Add point light souce (with shadows)
+                // ***************************** //
+                const light_1 = new THREE.PointLight('rgb(255, 0, 0)', 100);
+                light_1.decay = 1;
+                light_1.position.set(10, 10, 2);
+                // sceneElements.sceneGraph.add(light_1); // Don't add directly yet
+
+                // Setup shadow properties for the spotlight
+                light_1.castShadow = true;
+                light_1.shadow.mapSize.width = 2048;
+                light_1.shadow.mapSize.height = 2048;
+
+                // Give a name to the spot light
+                light_1.name = "light 1";
+
+                // TASK1.2.2 - Create other light types
+                // SpotLight
+                const light_spot = new THREE.SpotLight('rgb(255, 0, 0)', 100);
+                light_spot.decay = 1;
+                light_spot.position.set(10, 10, 2);
+                light_spot.castShadow = true;
+                light_spot.shadow.mapSize.width = 2048;
+                light_spot.shadow.mapSize.height = 2048;
+                light_spot.name = "light 1"; // Same name for animation compatibility
+                light_spot.angle = Math.PI / 4;
+                light_spot.penumbra = 0.5;
+
+                // DirectionalLight
+                const light_directional = new THREE.DirectionalLight('rgb(255, 0, 0)', 2); // Lower intensity for directional
+                light_directional.position.set(10, 10, 2);
+                light_directional.castShadow = true;
+                light_directional.shadow.mapSize.width = 2048;
+                light_directional.shadow.mapSize.height = 2048;
+                light_directional.name = "light 1"; // Same name
+
+                 // Store lights
+                 sceneElements.lightSources = {
+                    point: light_1,
+                    spot: light_spot,
+                    directional: light_directional
+                };
+
+                // Add initial light
+                sceneElements.sceneGraph.add(sceneElements.lightSources.point);
+
+                // TASK1.1.2 - add a second point light source to the scene placed at (-7.5, 7.5, 2); light color is green. It rotates clockwise around the YY axis, with smaller speed.
+                const light_2 = new THREE.PointLight('rgb(0, 255, 0)', 100);
+                light_2.decay = 1;
+                light_2.position.set(-7.5, 7.5, 2);
+                sceneElements.sceneGraph.add(light_2);
+
+                // Setup shadow properties for the second light
+                light_2.castShadow = true;
+                light_2.shadow.mapSize.width = 2048;
+                light_2.shadow.mapSize.height = 2048;
+
+                // Give a name to the second light
+                light_2.name = "light 2";
+
+                // TASK1.1.3 -Add a third point light source to the scene placed at (0, 3, 10); light color is blue.
+                const light_3 = new THREE.PointLight('rgb(0, 0, 255)', 100);
+                light_3.decay = 1;
+                light_3.position.set(0, 3, 10);
+                sceneElements.sceneGraph.add(light_3);
+
+                // TASK1.1.4 - Add a fourth point light source to the scene placed at (0, -10, 0); light color is white.
+                const light_4 = new THREE.PointLight('rgb(255, 255, 255)', 100);
+                light_4.decay = 1;
+                light_4.position.set(0, -10, 0);
+                sceneElements.sceneGraph.add(light_4);
+
+                // *********************************** //
+                // Create renderer (with shadow map)
+                // *********************************** //
+                const renderer = new THREE.WebGLRenderer({ antialias: true });
+                sceneElements.renderer = renderer;
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.setClearColor('rgb(255, 255, 150)', 1.0);
+                renderer.setSize(width, height);
+
+                // Setup shadowMap property
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+                // **************************************** //
+                // Add the rendered image in the HTML DOM
+                // **************************************** //
+                const htmlElement = document.querySelector("#Tag3DScene");
+                htmlElement.appendChild(renderer.domElement);
+
+                // ************************** //
+                // NEW --- Control for the camera
+                // ************************** //
+                sceneElements.control = new OrbitControls(camera, renderer.domElement);
+                sceneElements.control.screenSpacePanning = true;
+
+            },
+
+            render: function (sceneElements) {
+                sceneElements.renderer.render(sceneElements.sceneGraph, sceneElements.camera);
+            },
+        };
+
+        // FUCNTIONS FOR BUILDING THE SCENE
+
+        const scene = {
+
+            // Create and insert in the scene graph the models of the 3D scene
+
+            load3DObjects: function (sceneGraph) {
+                
+                // Common geometry
+                // TASK3.1.2 - Defined by more/less triangles
+                const sphereGeometryHigh = new THREE.SphereGeometry(0.5, 32, 32);
+                const sphereGeometryLow = new THREE.SphereGeometry(0.5, 8, 6); // Low Polygon count
+
+                const cubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+
+                // TASK3.1.1 - Compare shading procedures
+
+                // 1. Smooth / Gouraud Shading (MeshLambertMaterial)
+                const materialGouraud = new THREE.MeshLambertMaterial({ 
+                    color: 'rgb(0, 150, 0)' 
+                });
+
+                // 2. Phong Shading (MeshPhongMaterial - Default)
+                const materialPhong = new THREE.MeshPhongMaterial({ 
+                    color: 'rgb(0, 150, 0)',
+                    specular: 'rgb(255, 255, 255)',
+                    shininess: 100
+                });
+
+                // 3. Flat Shading (MeshPhongMaterial with flatShading: true)
+                const materialFlat = new THREE.MeshPhongMaterial({ 
+                    color: 'rgb(0, 150, 0)',
+                    specular: 'rgb(255, 255, 255)',
+                    shininess: 100,
+                    flatShading: true
+                });
+
+
+                // ---------------------------------------------
+                // LEFT: Smooth / Gouraud (Lambert)
+                // ---------------------------------------------
+                
+                // Sphere High Poly
+                const sphereObjectLeft = new THREE.Mesh(sphereGeometryHigh, materialGouraud);
+                sphereObjectLeft.name = "sphere_2";
+                sphereObjectLeft.position.x = -1.5;
+                sphereObjectLeft.castShadow = true;
+                sphereObjectLeft.receiveShadow = true;
+                sceneGraph.add(sphereObjectLeft);
+
+                // Sphere Low Poly (in front)
+                const sphereObjectLeftLow = new THREE.Mesh(sphereGeometryLow, materialGouraud);
+                sphereObjectLeftLow.name = "sphere_2_low";
+                sphereObjectLeftLow.position.set(-1.5, 0, 1.5);
+                sphereObjectLeftLow.castShadow = true;
+                sphereObjectLeftLow.receiveShadow = true;
+                sceneGraph.add(sphereObjectLeftLow);
+
+                // Cube
+                const cube2 = new THREE.Mesh(cubeGeometry, materialGouraud);
+                cube2.name = "cube_2";
+                cube2.position.set(-1.5, 1.5, 0);
+                cube2.castShadow = true;
+                cube2.receiveShadow = true;
+                sceneGraph.add(cube2);
+
+
+                // ---------------------------------------------
+                // CENTER: Phong Shading (Phong)
+                // ---------------------------------------------
+
+                // Sphere High Poly
+                const sphereObject = new THREE.Mesh(sphereGeometryHigh, materialPhong);
+                sphereObject.name = "sphere_1";
+                sphereObject.castShadow = true;
+                sphereObject.receiveShadow = true;
+                sceneGraph.add(sphereObject);
+
+                // Sphere Low Poly (in front)
+                const sphereObjectLow = new THREE.Mesh(sphereGeometryLow, materialPhong);
+                sphereObjectLow.name = "sphere_1_low";
+                sphereObjectLow.position.set(0, 0, 1.5);
+                sphereObjectLow.castShadow = true;
+                sphereObjectLow.receiveShadow = true;
+                sceneGraph.add(sphereObjectLow);
+
+                // Cube
+                const cube1 = new THREE.Mesh(cubeGeometry, materialPhong);
+                cube1.name = "cube_1";
+                cube1.position.set(0, 1.5, 0);
+                cube1.castShadow = true;
+                cube1.receiveShadow = true;
+                sceneGraph.add(cube1);
+
+
+                // ---------------------------------------------
+                // RIGHT: Flat Shading
+                // ---------------------------------------------
+
+                // Sphere High Poly
+                const sphereObjectRight = new THREE.Mesh(sphereGeometryHigh, materialFlat);
+                sphereObjectRight.name = "sphere_3";
+                sphereObjectRight.position.x = 1.5;
+                sphereObjectRight.castShadow = true;
+                sphereObjectRight.receiveShadow = true;
+                sceneGraph.add(sphereObjectRight);
+
+                // Sphere Low Poly (in front)
+                const sphereObjectRightLow = new THREE.Mesh(sphereGeometryLow, materialFlat);
+                sphereObjectRightLow.name = "sphere_3_low";
+                sphereObjectRightLow.position.set(1.5, 0, 1.5);
+                sphereObjectRightLow.castShadow = true;
+                sphereObjectRightLow.receiveShadow = true;
+                sceneGraph.add(sphereObjectRightLow);
+                
+                // Cube
+                const cube3 = new THREE.Mesh(cubeGeometry, materialFlat);
+                cube3.name = "cube_3";
+                cube3.position.set(1.5, 1.5, 0);
+                cube3.castShadow = true;
+                cube3.receiveShadow = true;
+                sceneGraph.add(cube3);
+
+
+                // TASK1.2.3 - Add a plane to receive shadows
+                const planeGeometry = new THREE.PlaneGeometry(20, 20);
+                const planeMaterial = new THREE.MeshPhongMaterial({ color: 'rgb(200, 200, 200)', side: THREE.DoubleSide });
+                const planeObject = new THREE.Mesh(planeGeometry, planeMaterial);
+                planeObject.rotation.x = -Math.PI / 2;
+                planeObject.position.y = -1;
+                planeObject.receiveShadow = true;
+                sceneGraph.add(planeObject);
+
+            }
+        };
+
+        // ANIMATION
+
+        // Displacement values
+        var delta = 0.1;
+
+        //To keep track of the keyboard - WASD
+        var keyD = false, keyA = false, keyS = false, keyW = false;
+
+        function computeFrame(time) {
+
+            // Can extract an object from the scene Graph from its name
+            const light_1 = sceneElements.sceneGraph.getObjectByName("light 1");
+            const light_2 = sceneElements.sceneGraph.getObjectByName("light 2");
+
+            const cube_1 = sceneElements.sceneGraph.getObjectByName("cube_1");
+            const cube_2 = sceneElements.sceneGraph.getObjectByName("cube_2");
+            const cube_3 = sceneElements.sceneGraph.getObjectByName("cube_3");
+
+            // COMPLETE THE CODE
+            
+            // TASK1.1.1 - Animation for light_1
+            light_1.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.01); 
+
+            // TASK1.1.2 - Animation for light_2
+            light_2.position.applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.005);
+
+            // TASK1.3.1 - Animation for cubes
+            if (cube_1) cube_1.rotation.y += 0.01;
+            if (cube_2) cube_2.rotation.y += 0.02;
+            if (cube_3) cube_3.rotation.y += 0.03;
+
+            // Rendering
+            helper.render(sceneElements);
+
+            // Animation
+            //Call for the next frame
+            requestAnimationFrame(computeFrame);
+        }
+
+        // Call functions:
+        //  1. Initialize the empty scene
+        //  2. Add elements within the scene
+        //  3. Animate
+
+        function init() {
+            helper.initEmptyScene(sceneElements);
+            scene.load3DObjects(sceneElements.sceneGraph);
+            requestAnimationFrame(computeFrame);
+        }
+
+        // HANDLING EVENTS
+
+        // Event Listeners
+
+        window.addEventListener('resize', resizeWindow);
+
+        document.addEventListener('keydown', onDocumentKeyDown, false);
+        document.addEventListener('keyup', onDocumentKeyUp, false);
+
+        // Update render image size and camera aspect when the window is resized
+        function resizeWindow(eventParam) {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            sceneElements.camera.aspect = width / height;
+            sceneElements.camera.updateProjectionMatrix();
+
+            sceneElements.renderer.setSize(width, height);
+
+            // Comment when doing animation
+            // computeFrame(sceneElements);
+        }
+
+        function onDocumentKeyDown(event) {
+            switch (event.keyCode) {
+                case 68: //d
+                    keyD = true;
+                    break;
+                case 83: //s
+                    keyS = true;
+                    break;
+                case 65: //a
+                    keyA = true;
+                    break;
+                case 87: //w
+                    keyW = true;
+                    break;
+
+                // TASK1.2.2 - Switch light sources
+                // 1 - Point Light
+                case 49: 
+                    const currentLight1 = sceneElements.sceneGraph.getObjectByName("light 1");
+                    if (currentLight1 && currentLight1 !== sceneElements.lightSources.point) {
+                        sceneElements.sceneGraph.remove(currentLight1);
+                        sceneElements.lightSources.point.position.copy(currentLight1.position);
+                        sceneElements.sceneGraph.add(sceneElements.lightSources.point);
+                    }
+                    else if (!currentLight1) { // If for some reason missing
+                         sceneElements.sceneGraph.add(sceneElements.lightSources.point);
+                    }
+                    break;
+                
+                // 2 - Spot Light
+                case 50:
+                    const currentLight2 = sceneElements.sceneGraph.getObjectByName("light 1");
+                    if (currentLight2 && currentLight2 !== sceneElements.lightSources.spot) {
+                        sceneElements.sceneGraph.remove(currentLight2);
+                        sceneElements.lightSources.spot.position.copy(currentLight2.position);
+                        sceneElements.sceneGraph.add(sceneElements.lightSources.spot);
+                    }
+                    break;
+
+                // 3 - Directional Light
+                case 51:
+                    const currentLight3 = sceneElements.sceneGraph.getObjectByName("light 1");
+                    if (currentLight3 && currentLight3 !== sceneElements.lightSources.directional) {
+                        sceneElements.sceneGraph.remove(currentLight3);
+                        sceneElements.lightSources.directional.position.copy(currentLight3.position);
+                        sceneElements.sceneGraph.add(sceneElements.lightSources.directional);
+                    }
+                    break;
+                
+                // TASK1.2.3 - Toggle shadows (Space key)
+                case 32:
+                    sceneElements.renderer.shadowMap.enabled = !sceneElements.renderer.shadowMap.enabled;
+                    sceneElements.sceneGraph.traverse(function (child) {
+                        if (child.material) {
+                            child.material.needsUpdate = true;
+                        }
+                    });
+                    console.log("Shadows " + (sceneElements.renderer.shadowMap.enabled ? "enabled" : "disabled"));
+                    break;
+            }
+        }
+
+        function onDocumentKeyUp(event) {
+            switch (event.keyCode) {
+                case 68: //d
+                    keyD = false;
+                    break;
+                case 83: //s
+                    keyS = false;
+                    break;
+                case 65: //a
+                    keyA = false;
+                    break;
+                case 87: //w
+                    keyW = false;
+                    break;
+            }
+        }
+
+
+        // STARTING
+
+        init();
+
+    </script>
+
+</head>
+
+<body>
+    <div id="Tag3DScene"> </div>
+</body>
+
+</html>

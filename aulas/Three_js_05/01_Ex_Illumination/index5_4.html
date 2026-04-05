@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<!--
+
+		J. Madeira - April 2021; Updated - March 2024
+
+-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title> 3D scene </title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://threejs.org/build/three.module.js",
+            "three/addons/": "https://threejs.org/examples/jsm/"
+          }
+        }
+      </script>
+
+    <script type="module">
+
+        import * as THREE from "three";
+
+        import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+        // To store the scene graph, and elements usefull to rendering the scene
+        const sceneElements = {
+            sceneGraph: null,
+            camera: null,
+            control: null,
+            renderer: null,
+            modelsGroup: null, // Group to hold all the random models
+        };
+
+        // HELPER FUNCTIONS
+
+        const helper = {
+
+            initEmptyScene: function (sceneElements) {
+
+                // ************************** //
+                // Create the 3D scene
+                // ************************** //
+                sceneElements.sceneGraph = new THREE.Scene();
+
+                // ************************** //
+                // Add camera
+                // ************************** //
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 500);
+                sceneElements.camera = camera;
+                camera.position.set(0, 5, 20);
+                camera.lookAt(0, 0, 0);
+
+                // ************************** //
+                // Illumination
+                // ************************** //
+
+                // ************************** //
+                // Add ambient light
+                // ************************** //
+                const ambientLight = new THREE.AmbientLight('rgb(255, 255, 255)', 0.2);
+                sceneElements.sceneGraph.add(ambientLight);
+
+                // ***************************** //
+                // Add directional light source
+                // ***************************** //
+                const light1 = new THREE.DirectionalLight('rgb(255, 255, 255)', 1);
+                light1.position.set(10, 10, 10);
+                light1.castShadow = true;
+                light1.shadow.mapSize.width = 2048;
+                light1.shadow.mapSize.height = 2048;
+                sceneElements.sceneGraph.add(light1);
+
+                const light2 = new THREE.DirectionalLight('rgb(255, 255, 255)', 0.5);
+                light2.position.set(-10, -5, -10);
+                sceneElements.sceneGraph.add(light2);
+
+
+                // *********************************** //
+                // Create renderer (with shadow map)
+                // *********************************** //
+                const renderer = new THREE.WebGLRenderer({ antialias: true });
+                sceneElements.renderer = renderer;
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.setClearColor('rgb(255, 255, 150)', 1.0);
+                renderer.setSize(width, height);
+
+                // Setup shadowMap property
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+                // **************************************** //
+                // Add the rendered image in the HTML DOM
+                // **************************************** //
+                const htmlElement = document.querySelector("#Tag3DScene");
+                htmlElement.appendChild(renderer.domElement);
+
+                // ************************** //
+                // Control for the camera
+                // ************************** //
+                sceneElements.control = new OrbitControls(camera, renderer.domElement);
+                sceneElements.control.screenSpacePanning = true;
+
+            },
+
+            render: function (sceneElements) {
+                sceneElements.renderer.render(sceneElements.sceneGraph, sceneElements.camera);
+            },
+        };
+
+        // FUNCTIONS FOR BUILDING THE SCENE
+
+        const scene = {
+
+            // Create and insert in the scene graph the models of the 3D scene
+
+            load3DObjects: function (sceneGraph) {
+                
+                // Group to hold all models
+                sceneElements.modelsGroup = new THREE.Group();
+                sceneGraph.add(sceneElements.modelsGroup);
+
+                // Generate 50 random objects
+                for (let i = 0; i < 50; i++) {
+                   scene.addRandomObject();
+                }
+            },
+
+            addRandomObject: function() {
+                const geometries = [
+                    new THREE.BoxGeometry(1, 1, 1),
+                    new THREE.SphereGeometry(0.5, 32, 32),
+                    new THREE.ConeGeometry(0.5, 1, 32),
+                    new THREE.CylinderGeometry(0.5, 0.5, 1, 32),
+                    new THREE.TorusGeometry(0.5, 0.2, 16, 100),
+                    new THREE.TetrahedronGeometry(0.5),
+                    new THREE.OctahedronGeometry(0.5),
+                    new THREE.DodecahedronGeometry(0.5),
+                    new THREE.IcosahedronGeometry(0.5)
+                ];
+
+                // Random geometry
+                const geometry = geometries[Math.floor(Math.random() * geometries.length)];
+
+                // Random material properties
+                const color = new THREE.Color(Math.random(), Math.random(), Math.random());
+                const shininess = Math.random() * 100;
+                
+                // Randomly choose between Phong and Lambert
+                let material;
+                if (Math.random() > 0.5) {
+                    material = new THREE.MeshPhongMaterial({ color: color, shininess: shininess, specular: 0x111111 });
+                } else {
+                    material = new THREE.MeshLambertMaterial({ color: color });
+                }
+
+                const mesh = new THREE.Mesh(geometry, material);
+
+                // Random position (-10 to 10)
+                mesh.position.x = (Math.random() - 0.5) * 20;
+                mesh.position.y = (Math.random() - 0.5) * 20;
+                mesh.position.z = (Math.random() - 0.5) * 20;
+
+                // Random scale (0.5 to 1.5)
+                const scale = 0.5 + Math.random();
+                mesh.scale.set(scale, scale, scale);
+
+                // Random rotation
+                mesh.rotation.x = Math.random() * Math.PI;
+                mesh.rotation.y = Math.random() * Math.PI;
+                mesh.rotation.z = Math.random() * Math.PI;
+
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+
+                sceneElements.modelsGroup.add(mesh);
+            },
+
+            removeLastObject: function() {
+                const group = sceneElements.modelsGroup;
+                if (group.children.length > 0) {
+                    const lastObject = group.children[group.children.length - 1];
+                    group.remove(lastObject);
+                    // Dispose geometry and material to clear memory
+                    if (lastObject.geometry) lastObject.geometry.dispose();
+                    if (lastObject.material) lastObject.material.dispose();
+                }
+            }
+        };
+
+        // ANIMATION
+
+        function computeFrame(time) {
+
+            // Rotate the entire group around the vertical axis (Y)
+            if (sceneElements.modelsGroup) {
+                sceneElements.modelsGroup.rotation.y += 0.005;
+
+                // Rotate each model around its own horizontal axis (X)
+                sceneElements.modelsGroup.children.forEach(child => {
+                    child.rotation.x += 0.02;
+                });
+            }
+
+            // Rendering
+            helper.render(sceneElements);
+
+            // Animation
+            //Call for the next frame
+            requestAnimationFrame(computeFrame);
+        }
+
+        // Call functions:
+        //  1. Initialize the empty scene
+        //  2. Add elements within the scene
+        //  3. Animate
+
+        function init() {
+            helper.initEmptyScene(sceneElements);
+            scene.load3DObjects(sceneElements.sceneGraph);
+            requestAnimationFrame(computeFrame);
+        }
+
+        // HANDLING EVENTS
+
+        // Event Listeners
+
+        window.addEventListener('resize', resizeWindow);
+
+        document.addEventListener('keydown', onDocumentKeyDown, false);
+
+        // Update render image size and camera aspect when the window is resized
+        function resizeWindow(eventParam) {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            sceneElements.camera.aspect = width / height;
+            sceneElements.camera.updateProjectionMatrix();
+
+            sceneElements.renderer.setSize(width, height);
+        }
+
+        function onDocumentKeyDown(event) {
+            switch (event.keyCode) {
+                case 107: // Numpad +
+                case 187: // +
+                    scene.addRandomObject();
+                    break;
+                case 109: // Numpad -
+                case 189: // -
+                    scene.removeLastObject();
+                    break;
+            }
+        }
+
+
+        // STARTING
+
+        init();
+
+    </script>
+
+</head>
+
+<body>
+    <div id="Tag3DScene"> </div>
+</body>
+
+</html>

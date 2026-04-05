@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<!--
+
+		threejs_ex_01_07_cars.html
+
+		Simple example: using basic models to buid a car model
+
+		J. Madeira - February 2026
+
+		An example provided by Google Gemini with simple prompting.
+
+-->
+
+<head>
+
+	<title>three.js example 06 &mdash; Transparency and Animation</title>
+
+	<meta charset="utf-8">
+
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+	<style>
+		body {
+
+			background-color: #ffffff;
+
+			/* To use the complete page */
+
+			margin: 0px;
+
+			overflow: hidden;
+		}
+	</style>
+
+</head>
+
+<body>
+
+	<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+	<script type="importmap">
+		{
+    		"imports": {
+     			 "three": "https://threejs.org/build/three.module.js"
+    		}
+  		}
+	</script>
+
+	<script type="module">
+
+		import * as THREE from 'three';
+
+function init() {
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87CEEB); // Sky blue
+
+    // --- THE GROUND ---
+    const groundGeo = new THREE.PlaneGeometry(1000, 1000);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x333333 }); // Asphalt grey
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2; // Lay it flat
+    scene.add(ground);
+
+    // --- CAR FACTORY FUNCTION ---
+    function createCar(color, x, z) {
+        const car = new THREE.Group();
+
+        // 1. Car Body (Box)
+        const body = new THREE.Mesh(
+            new THREE.BoxGeometry(60, 20, 30),
+            new THREE.MeshStandardMaterial({ color: color })
+        );
+        body.position.y = 15; // Lift above ground
+        car.add(body);
+
+        // 2. Car Roof (Smaller Box)
+        const roof = new THREE.Mesh(
+            new THREE.BoxGeometry(30, 154, 25),
+            new THREE.MeshStandardMaterial({ color: 0x0000000, transparent: true, opacity: 0.4 })
+        );
+        roof.position.set(-5, 30, 0);
+        car.add(roof);
+
+        // 3. Wheels (Cylinders)
+        const wheelGeo = new THREE.CylinderGeometry(8, 8, 5, 32);
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111fff });
+        
+        const wheelPositions = [
+            [-20, 8, 15], [20, 8, 15],  // Front & Back Left
+            [-20, 8, -15], [20, 8, -15] // Front & Back Right
+        ];
+
+        wheelPositions.forEach(pos => {
+            const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+            wheel.position.set(...pos);
+            wheel.rotation.x = Math.PI / 2; // Flip cylinder on its side
+            car.add(wheel);
+        });
+
+        car.position.set(x, 0, z);
+        return car;
+    }
+
+    // --- INSTANTIATE MULTIPLE CARS ---
+    const cars = [];
+    cars.push(createCar(0xff0000, -100, 0));  // Red car
+    cars.push(createCar(0x800080, 0, 100));   // Green car
+    cars.push(createCar(0x330600, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0xffffff, 10, -10)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+    cars.push(createCar(0x000088, 100, -50)); // Yellow car
+
+    cars.forEach(c => scene.add(c));
+
+    // --- LIGHTING ---
+    const sun = new THREE.DirectionalLight(0xffffff, 2);
+    sun.position.set(100, 200, 100);
+    scene.add(sun);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
+    // --- CAMERA & RENDERER ---
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 2000);
+    camera.position.set(0, 150, 300);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // --- ANIMATION ---
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        // Make them "drive" in circles
+        const time = Date.now() * 0.001;
+        cars.forEach((car, i) => {
+            const radius = 100 + (i * 40);
+            car.position.x = Math.cos(time + i) * radius;
+            car.position.z = Math.sin(time + i) * radius;
+            car.rotation.y = -(time + i); // Point the car in the direction it drives
+        });
+
+        renderer.render(scene, camera);
+    }
+    animate();
+}
+
+window.onload = init;
+
+	</script>
+
+</body>
+
+</html>

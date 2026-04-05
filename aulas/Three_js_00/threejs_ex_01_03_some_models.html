@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<!--
+
+		threejs_ex_01_03_some_models.html
+
+		Simple example: instantiating models
+
+		J. Madeira - February 2023 - Updated: April 2023
+
+		Adapted / simplified from 
+
+		https://github.com/mrdoob/three.js/blob/master/examples/webgl_geometry_cube.html
+
+-->
+
+<head>
+
+	<title>three.js example 03 &mdash; Some models</title>
+
+	<meta charset="utf-8">
+
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+	<style>
+		body {
+
+			background-color: #ffffff;
+
+			/* To use the complete page */
+
+			margin: 0px;
+
+			overflow: hidden;
+		}
+	</style>
+
+</head>
+
+<body>
+
+	<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+	<script type="importmap">
+		{
+    		"imports": {
+     			 "three": "https://threejs.org/build/three.module.js"
+    		}
+  		}
+	</script>
+
+	<script type="module">
+
+		import * as THREE from 'three';
+
+		// Once everything is loaded, run this function
+
+		function init() {
+
+			// The SCENE
+
+			const scene = new THREE.Scene();
+
+			// MODELING 
+
+			// A cube centred on the origin, with given width, height and depth
+
+			const cube_geometry = new THREE.BoxGeometry(50, 50, 50);
+
+			// A constant color
+
+			const green_material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+
+			// One cube mesh model 
+
+			const cube_1 = new THREE.Mesh(cube_geometry, green_material);
+
+			// Moving it to the left
+
+			cube_1.position.x = -100;
+
+			// Adding it to the scene
+
+			scene.add(cube_1);
+
+			// Another cube
+
+			const red_material = new THREE.MeshBasicMaterial({ color: 0xff0000 })
+
+			const cube_2 = new THREE.Mesh(cube_geometry, red_material);
+
+			// Moving to the right
+
+			cube_2.position.x = 100;
+
+			// Adding to the scene
+
+			scene.add(cube_2);
+
+			// A sphere
+
+			const sphere_geometry = new THREE.SphereGeometry(30, 32, 32);
+
+			const blue_material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+
+			const sphere = new THREE.Mesh(sphere_geometry, blue_material);
+
+			sphere.position.y = -75;
+
+			scene.add(sphere);
+
+			// A cone
+
+			const cone_geometry = new THREE.ConeGeometry(45, 90, 32);
+
+			const yellow_material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+
+			const cone = new THREE.Mesh(cone_geometry, yellow_material);
+
+			cone.position.y = 80;
+
+			scene.add(cone);
+
+			// The CAMERA --- A camera is added to the scene
+
+			// --- Where the viewer is and how he is looking at the scene
+
+			const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
+
+			// Position the camera
+
+			camera.position.z = 200;
+
+			// Point the camera to the center of the scene
+
+			camera.lookAt(scene.position);
+
+			scene.add(camera)
+
+			// The RENDERER --- To display the scene on the Web page
+
+			const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+			renderer.setClearColor(new THREE.Color(0xffffff));
+
+			renderer.setPixelRatio(window.devicePixelRatio);
+
+			renderer.setSize(window.innerWidth, window.innerHeight);
+
+			// Add the output of the renderer
+
+			document.body.appendChild(renderer.domElement);
+
+			// Render the scene
+
+			renderer.render(scene, camera);
+		}
+
+		window.onload = init
+
+	</script>
+
+</body>
+
+</html>
