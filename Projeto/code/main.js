@@ -19,18 +19,55 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
 const canvasParent = document.getElementById('Tag3DScene');
-canvasParent.appendChild(renderer.domElement);
+const canvas = renderer.domElement;
+canvasParent.appendChild(canvas);
 
-// Controlo de órbita para debugging e interação
-const orbitControls = new OrbitControls(camera, renderer.domElement);
+// HACK: Esconder a tecla Shift dos OrbitControls para permitir rotação enquanto corre
+// Os OrbitControls forçam o modo PAN quando o Shift está pressionado, o que bloqueia a rotação.
+const proxyCanvas = new Proxy(canvas, {
+    get(target, prop) {
+        if (prop === 'addEventListener') {
+            return (type, listener, options) => {
+                const wrappedListener = (event) => {
+                    if (event instanceof PointerEvent || event instanceof MouseEvent || event instanceof WheelEvent) {
+                        // Criar um proxy do evento que mente sobre o estado da tecla Shift
+                        const eventProxy = new Proxy(event, {
+                            get(e, p) {
+                                if (p === 'shiftKey') return false;
+                                let v = e[p];
+                                return typeof v === 'function' ? v.bind(e) : v;
+                            }
+                        });
+                        return listener(eventProxy);
+                    }
+                    return listener(event);
+                };
+                return target.addEventListener(type, wrappedListener, options);
+            };
+        }
+        let value = target[prop];
+        return typeof value === 'function' ? value.bind(target) : value;
+    }
+});
+
+// Controlo de órbita para debugging e interação (usando o proxy para ignorar Shift)
+const orbitControls = new OrbitControls(camera, proxyCanvas);
 orbitControls.enableDamping = true;
 orbitControls.dampingFactor = 0.1;
 orbitControls.enablePan = false;
-orbitControls.minDistance = 0.5; // Não entrar no guaxinim
-orbitControls.maxDistance = 5.0; // Não afastar demasiado
-orbitControls.minPolarAngle = Math.PI / 6; // Não olhar demasiado de cima
-orbitControls.maxPolarAngle = Math.PI / 1.5; // Não olhar demasiado de baixo (chão)
+orbitControls.minDistance = 0.2; 
+orbitControls.maxDistance = 5.0; 
+orbitControls.minPolarAngle = Math.PI / 10; 
+orbitControls.maxPolarAngle = Math.PI / 1.5; 
 orbitControls.target.set(0, 0, 0);
+
+// Forçar rotação em todos os botões e desativar PAN
+orbitControls.mouseButtons = {
+    LEFT: 0,   // THREE.MOUSE.ROTATE
+    MIDDLE: 1, // THREE.MOUSE.DOLLY
+    RIGHT: 0   // THREE.MOUSE.ROTATE (Substituir PAN para evitar bloqueios)
+};
+orbitControls.enablePan = false; 
 
 // Guaxinim e câmara de terceira pessoa
 const raccoon = new Raccoon(scene);
@@ -49,13 +86,11 @@ raccoon.modelLoaded.then(() => {
         // Atualizar a lógica do guaxinim (animações e movimento)
         raccoon.update(delta, keyStates);
 
-        // Atualizar a câmara de terceira pessoa
+        // Atualizar a câmara de terceira pessoa 
         thirdPersonCamera.update(isMoving, orbitControls);
 
-        // Atualizar os controlos de órbita apenas se houver interação manual
-        if (thirdPersonCamera.isInteracting) {
-            orbitControls.update();
-        }
+        // Atualizar sempre os controlos de órbita para manter o estado interno sincronizado
+        orbitControls.update();
 
         renderer.render(scene, camera);
     }
