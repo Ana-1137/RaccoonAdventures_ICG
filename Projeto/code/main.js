@@ -82,12 +82,13 @@ raccoon.modelLoaded.then(() => {
 
         const delta = clock.getDelta();
         const isMoving = keyStates.w || keyStates.s || keyStates.a || keyStates.d;
+        const isRunning = isMoving && keyStates.shift;
 
         // Atualizar a lógica do guaxinim (animações e movimento)
         raccoon.update(delta, keyStates);
 
-        // Atualizar a câmara de terceira pessoa 
-        thirdPersonCamera.update(isMoving, orbitControls);
+        // Atualizar a câmara de terceira pessoa (agora passando isRunning para efeitos de velocidade)
+        thirdPersonCamera.update(isMoving, orbitControls, isRunning);
 
         // Atualizar sempre os controlos de órbita para manter o estado interno sincronizado
         orbitControls.update();

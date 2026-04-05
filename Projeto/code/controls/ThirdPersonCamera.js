@@ -43,12 +43,22 @@ class ThirdPersonCamera {
         orbitControls.addEventListener('end', stopInteracting);
     }
 
-    update(isMoving, orbitControls) {
+    update(isMoving, orbitControls, isRunning) {
         if (!this.target) return;
 
+        // --- Efeitos de Velocidade (Fase 7) ---
+        // Aumentar o FOV quando corre (efeito de distorção)
+        const targetFOV = isRunning ? 65 : 45;
+        this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFOV, 0.05);
+        this.camera.updateProjectionMatrix();
+
+        // Afastar um pouco a câmara quando corre
+        const targetDistance = isRunning ? this.defaultDistance * 1.3 : this.defaultDistance;
+
+        // --- Sincronização e Movimento ---
         const targetPos = this.target.position.clone().add(this.lookAtOffset);
         
-        // Sincronização direta de posição para evitar lag/desprendimento
+        // Sincronização direta de posição para evitar lag
         const deltaMove = this.target.position.clone().sub(this.lastTargetPosition);
         this.camera.position.add(deltaMove);
         this.lastTargetPosition.copy(this.target.position);
@@ -56,20 +66,24 @@ class ThirdPersonCamera {
         // Alvo dos controlos sempre no guaxinim
         orbitControls.target.copy(targetPos);
 
-        // LÓGICA DE RETORNO (Fase 6):
-        // Só forçamos o regresso ao default se NÃO estivermos a interagir E estivermos a mover
         if (!this.isInteracting && isMoving) {
             const idealOffset = this.defaultOffsetDirection.clone().applyQuaternion(this.target.quaternion);
-            const idealPosition = targetPos.clone().add(idealOffset.multiplyScalar(this.defaultDistance));
+            
+            // Adicionar um tremor ultra-subtil se estiver a correr
+            if (isRunning) {
+                idealOffset.x += (Math.random() - 0.5) * 0.015;
+                idealOffset.y += (Math.random() - 0.5) * 0.015;
+            }
 
-            // Retorno suave à posição default de ombro e zoom
+            const idealPosition = targetPos.clone().add(idealOffset.multiplyScalar(targetDistance));
+
+            // Lerp para posição e zoom
             this.camera.position.lerp(idealPosition, 0.1);
             this.camera.lookAt(targetPos);
         } else if (!this.isInteracting) {
-            // Se parado e sem interação, mantemos a posição onde o user deixou, mas focamos no alvo
+            // Focagem manual
             this.camera.lookAt(targetPos);
         }
-        // Se isInteracting for true, main.js chamará orbitControls.update()
     }
 }
 
