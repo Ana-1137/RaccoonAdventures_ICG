@@ -28,6 +28,10 @@ const SETTINGS = {
         walkStartFrame: 15,            // frame inicial do sub-clip do jump a andar
         walkEndTrimFrames: 15,          // frames a cortar no final (termina antes da pose estática)
     },
+    terrified: {
+        loopStartFrame: 30,             // Início
+        loopEndFrame: 60,              // Cortar mais cedo para evitar abaixar-se (Fase 12 Final)
+    },
     lean: {
         maxAngle: 0.35,  // radianos de inclinação máxima da coluna
         smoothing: 0.1,   // lerp factor (0 = instantâneo, 1 = muito suave)
@@ -58,6 +62,7 @@ const STATES = {
     SITTING_DOWN: 'SITTING_DOWN',
     STANDING_UP: 'STANDING_UP',
     TERRIFIED: 'TERRIFIED',
+    TERRIFIED_LOOP: 'TERRIFIED_LOOP',
 };
 
 // ─── Mapeamento de animações FBX ─────────────────────────────────────────────
@@ -77,7 +82,7 @@ const ANIM_FILES = [
 ];
 
 /** Animações que devem tocar apenas uma vez e parar no último frame. */
-const ONE_SHOT_ANIMS = new Set(['sit', 'stand', 'jump_stand', 'jump_run', 'jump_walk', 'run_left', 'run_right']);
+const ONE_SHOT_ANIMS = new Set(['sit', 'stand', 'jump_stand', 'jump_run', 'jump_walk', 'run_left', 'run_right', 'terrified']);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -209,6 +214,15 @@ class Raccoon {
         walkAction.loop = THREE.LoopOnce;
         walkAction.clampWhenFinished = true;
         this.actions['jump_walk'] = walkAction;
+
+        // Criar loop de Vertigens (olhar para os lados sem se baixar)
+        const baseTerrified = this.actions['terrified'].getClip();
+        const { loopStartFrame, loopEndFrame } = SETTINGS.terrified;
+        const terrifiedClip = THREE.AnimationUtils.subclip(baseTerrified, 'terrified_loop', loopStartFrame, loopEndFrame, 30);
+        const terrifiedAction = this.mixer.clipAction(terrifiedClip);
+        // PingPong faz com que ele olhe para os lados e volte suavemente, evitando o "corte" seco (Fase 12 Final)
+        terrifiedAction.loop = THREE.LoopPingPong;
+        this.actions['terrified_loop'] = terrifiedAction;
     }
 
     /**
@@ -286,8 +300,9 @@ class Raccoon {
         };
         const isMoving = input.forward || input.backward || input.left || input.right;
         const isRunning = isMoving && input.run;
+        const isTerrified = (this.currentState === STATES.TERRIFIED || this.currentState === STATES.TERRIFIED_LOOP);
 
-        if (isMoving || input.jump) this.idleTimer = 0;
+        if (isMoving || input.jump || isTerrified) this.idleTimer = 0;
 
         // --- SISTEMA DE FÍSICA E CHÃO (Fase 12) ---
         this._handleGravityAndGround(delta);
@@ -320,7 +335,7 @@ class Raccoon {
         // --- BARREIRA DE VERTIGENS (Fase 12 Refinada) ---
         // Se estiver com Vertigens, bloqueia movimento para a frente (W)
         // Permitimos rodar (A/D) e andar para trás (S) para sair do perigo
-        const isBlockedByFear = (this.currentState === STATES.TERRIFIED && input.forward);
+        const isBlockedByFear = (isTerrified && input.forward);
 
         if (isMoving && !isBlockedByFear) {
             this._handleMovement(delta, isRunning, input);
@@ -491,7 +506,8 @@ class Raccoon {
         // Não substituir IDLE se estivermos com Medo (TERRIFIED) ── Fase 12 Final
         if (this.currentState !== STATES.IDLE &&
             this.currentState !== STATES.WOBBLE &&
-            this.currentState !== STATES.TERRIFIED) {
+            this.currentState !== STATES.TERRIFIED &&
+            this.currentState !== STATES.TERRIFIED_LOOP) {
             // Wobble apenas se o último movimento foi corrida; senão vai para idle
             const targetAnim = (this.lastMoveState === 'RUN') ? 'wobble' : 'idle';
             this.fadeToAction(targetAnim, SETTINGS.blend.toIdle);
@@ -608,7 +624,9 @@ class Raccoon {
         let scaryDepth = false;
         if (intersects.length > 0) {
             const depth = this.model.position.y - intersects[0].point.y;
-            if (depth > SETTINGS.physics.ledgeDepth) {
+            // Buffer de estabilidade: se já estivermos com medo, aceitamos uma profundidade menor
+            const threshold = (this.currentState === STATES.TERRIFIED) ? (SETTINGS.physics.ledgeDepth * 0.8) : SETTINGS.physics.ledgeDepth;
+            if (depth > threshold) {
                 scaryDepth = true;
             }
         } else {
@@ -619,12 +637,15 @@ class Raccoon {
         if (scaryDepth) {
             if (this.currentState !== STATES.TERRIFIED) {
                 this.currentState = STATES.TERRIFIED;
-                this.fadeToAction('terrified', SETTINGS.blend.toTerrified);
+                this.fadeToAction('terrified_loop', SETTINGS.blend.toTerrified);
             }
         } else if (this.currentState === STATES.TERRIFIED) {
-            // Só sai do medo se o chão à frente voltar a ser seguro
-            this.currentState = STATES.IDLE;
-            this.fadeToAction('idle', SETTINGS.blend.toIdle);
+            // Só sai do medo se o chão à frente voltar a ser seguro (estabilização)
+            // Se o usuário estiver parado, mantemos o medo um pouco mais para evitar flickering
+            if (isMoving || !scaryDepth) {
+                this.currentState = STATES.IDLE;
+                this.fadeToAction('idle', SETTINGS.blend.toIdle);
+            }
         }
     }
 }
