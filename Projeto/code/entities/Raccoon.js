@@ -6,16 +6,16 @@ class Raccoon {
         this.scene = scene;
         this.model = null;
         this.mixer = null;
-        
+
         this.actions = {};
         this.activeAction = null;
         this.currentState = 'IDLE';
         this.idleTimer = 0;
         this.lastMoveState = null;
         this.wasJumping = false;
-        this.previousLeanSide = 'NONE'; // Adicionado para evitar re-triggers (Fase 11)
-        
-        // Procedural Lean (Fase 11)
+        this.previousLeanSide = 'NONE'; // Adicionado para evitar re-triggers 
+
+        // Procedural Lean 
         this.leanAmount = 0;
         this.targetLean = 0;
         this.spine = null;
@@ -31,35 +31,35 @@ class Raccoon {
         loader.load('../elements/Raccoon.fbx', (fbx) => {
             this.model = fbx;
             this.model.name = "guaxinim";
-            
-            this.model.scale.set(0.1, 0.1, 0.1); 
-            this.model.position.set(0, 0, 0); 
-            
+
+            this.model.scale.set(0.1, 0.1, 0.1);
+            this.model.position.set(0, 0, 0);
+
             this.model.traverse((child) => {
                 if (child.isMesh) {
                     child.castShadow = true;
                     child.receiveShadow = true;
                 }
-                // Encontrar o osso da coluna para inclinação procedural (Fase 11)
+                // Encontrar o osso da coluna para inclinação procedural 
                 if (child.isBone && child.name.includes('Spine')) {
                     this.spine = child;
                 }
             });
 
             this.scene.add(this.model);
-            
+
             this.mixer = new THREE.AnimationMixer(this.model);
 
             // Carregar Animações FBX
             const animLoader = new FBXLoader();
             const animationsPath = '../animations/';
-            
+
             const loadAnim = (name, file) => {
                 return new Promise((resolve) => {
                     animLoader.load(animationsPath + file, (animFbx) => {
                         let clip = animFbx.animations[0];
 
-                        // One-shot para curvas (Fase 11): Agora usamos curvas apenas como transição
+                        // One-shot para curvas : Agora usamos curvas apenas como transição
                         if (name === 'run_left' || name === 'run_right') {
                             const action = this.mixer.clipAction(clip);
                             action.name = name;
@@ -72,7 +72,7 @@ class Raccoon {
 
                         const action = this.mixer.clipAction(clip);
                         action.name = name;
-                        
+
                         if (name === 'sit' || name === 'stand' || name === 'jump_stand' || name === 'jump_run' || name === 'jump_walk') {
                             action.loop = THREE.LoopOnce;
                             action.clampWhenFinished = true;
@@ -96,9 +96,10 @@ class Raccoon {
                 loadAnim('stand', 'Sit To Stand.fbx'),
                 loadAnim('terrified', 'Terrified.fbx')
             ]).then(() => {
-                // Criar a variação de salto a andar (clipped) - Fase 9
+                // Criar a variação de salto a andar (clipped) - 
                 const baseJumpClip = this.actions['jump_stand'].getClip();
-                const jumpWalkClip = THREE.AnimationUtils.subclip(baseJumpClip, 'jump_walk', 8, Math.floor(baseJumpClip.duration * 30), 30);
+                const endFrame = Math.floor(baseJumpClip.duration * 30) - 15; // Corte final para evitar paragem visual
+                const jumpWalkClip = THREE.AnimationUtils.subclip(baseJumpClip, 'jump_walk', 15, endFrame, 30);
                 const jumpWalkAction = this.mixer.clipAction(jumpWalkClip);
                 jumpWalkAction.loop = THREE.LoopOnce;
                 jumpWalkAction.clampWhenFinished = true;
@@ -106,10 +107,10 @@ class Raccoon {
 
                 this.currentState = 'SITTING';
                 if (this.actions['sit']) {
-                     this.activeAction = this.actions['sit'];
-                     this.activeAction.play();
-                     this.activeAction.paused = true;
-                     this.activeAction.time = this.activeAction.getClip().duration;
+                    this.activeAction = this.actions['sit'];
+                    this.activeAction.play();
+                    this.activeAction.paused = true;
+                    this.activeAction.time = this.activeAction.getClip().duration;
                 }
                 if (resolve) resolve();
             });
@@ -118,7 +119,7 @@ class Raccoon {
 
     fadeToAction(name, duration, syncTime = false) {
         if (!this.actions[name] || this.activeAction === this.actions[name]) return;
-        
+
         const previousAction = this.activeAction;
         this.activeAction = this.actions[name];
 
@@ -163,36 +164,36 @@ class Raccoon {
             this.idleTimer = 0;
         }
 
-        // --- SISTEMA DE INCLINAÇÃO V2 (Fase 11) ---
+        // --- SISTEMA DE INCLINAÇÃO V2  ---
         // Apenas inclinar se estiver a correr ou a andar rápido
         if (isRunning && isMoving) {
             // A = Esquerda (Inclinamos aprox. -20 graus), D = Direita
-            if (keyStates.a) this.targetLean = -0.35; 
-            else if (keyStates.d) this.targetLean = 0.35; 
+            if (keyStates.a) this.targetLean = -0.35;
+            else if (keyStates.d) this.targetLean = 0.35;
             else this.targetLean = 0;
         } else {
             this.targetLean = 0;
         }
-        
+
         // Suavizar a inclinação
         this.leanAmount = THREE.MathUtils.lerp(this.leanAmount, this.targetLean, 0.1);
-        
+
         // Aplicar APENAS ao osso da coluna (para não afetar as patas)
         if (this.spine) {
             this.spine.rotation.z = this.leanAmount;
         }
 
         // --- SISTEMA DE ESTADOS ---
-        
-        // 1. Saltando (Lógica dinâmica Fase 9)
-        if (isJumping && !this.wasJumping && 
-            this.currentState !== 'JUMP' && 
-            this.currentState !== 'SITTING' && 
-            this.currentState !== 'SITTING_DOWN' && 
+
+        // 1. Saltando (Lógica dinâmica )
+        if (isJumping && !this.wasJumping &&
+            this.currentState !== 'JUMP' &&
+            this.currentState !== 'SITTING' &&
+            this.currentState !== 'SITTING_DOWN' &&
             this.currentState !== 'STANDING_UP') {
-            
+
             this.currentState = 'JUMP';
-            
+
             // Escolher animação e velocidade de balanço
             let jumpAnim = 'jump_stand';
             this.jumpForwardSpeed = 0;
@@ -206,7 +207,7 @@ class Raccoon {
             }
 
             this.fadeToAction(jumpAnim, 0.1);
-            
+
             const onJumpFinished = (e) => {
                 if (e.action === this.actions[jumpAnim]) {
                     this.currentState = 'IDLE';
@@ -217,9 +218,9 @@ class Raccoon {
         }
         this.wasJumping = isJumping;
 
-        // Manter inércia durante o salto (Fase 9 Fix: removido o multiplicador * 60 excessivo)
+        // Manter inércia durante o salto ( Fix: removido o multiplicador * 60 excessivo)
         if (this.currentState === 'JUMP') {
-            this.model.translateZ(this.jumpForwardSpeed * delta); 
+            this.model.translateZ(this.jumpForwardSpeed * delta);
             return; // Bloqueia rotação e novos inputs de movimento
         }
 
@@ -228,7 +229,7 @@ class Raccoon {
             if (isMoving || isJumping) {
                 this.currentState = 'STANDING_UP';
                 this.fadeToAction('stand', 0.5);
-                
+
                 const onFinished = (e) => {
                     if (e.action === this.actions['stand']) {
                         this.currentState = 'IDLE';
@@ -247,7 +248,7 @@ class Raccoon {
         // 3. Movimento Ativo
         if (isMoving) {
             this.idleTimer = 0;
-            const moveSpeed = (isRunning ? 15 : 6) * delta * 0.1; 
+            const moveSpeed = (isRunning ? 15 : 6) * delta * 0.1;
             const rotateSpeed = 2.5 * delta;
 
             if (keyStates.w) this.model.translateZ(moveSpeed);
@@ -256,13 +257,13 @@ class Raccoon {
             if (keyStates.d) this.model.rotateY(-rotateSpeed);
 
             if (isRunning) {
-                // Curvas durante a corrida (Fase 11: One-shot transition + Procedural Lean)
+                // Curvas durante a corrida (One-shot transition + Procedural Lean)
                 if (keyStates.a) {
                     if (this.currentState !== 'RUN_LEFT_TRANSITION' && this.previousLeanSide !== 'LEFT') {
                         this.fadeToAction('run_left', 0.4, true);
                         this.currentState = 'RUN_LEFT_TRANSITION';
                         this.previousLeanSide = 'LEFT';
-                        
+
                         // Quando a animação de curva (One-Shot) terminar, voltamos para o RUN estável (PÉS)
                         const onLeanFinished = (e) => {
                             if (e.action === this.actions['run_left']) {
@@ -278,7 +279,7 @@ class Raccoon {
                         this.fadeToAction('run_right', 0.4, true);
                         this.currentState = 'RUN_RIGHT_TRANSITION';
                         this.previousLeanSide = 'RIGHT';
-                        
+
                         const onLeanFinished = (e) => {
                             if (e.action === this.actions['run_right']) {
                                 this.fadeToAction('run', 0.4, true);
@@ -303,7 +304,7 @@ class Raccoon {
                 }
                 this.lastMoveState = 'WALK';
             }
-        } 
+        }
         // 4. Parado (AFK Logic)
         else {
             if (this.currentState !== 'IDLE' && this.currentState !== 'WOBBLE') {
@@ -314,13 +315,13 @@ class Raccoon {
             }
 
             this.idleTimer += delta;
-            
+
             // Sentar apenas se estiver AFK por algum tempo (ex: 5 segundos)
-            // Ou se a animação de Wobble/Idle terminar (como pediste)
+            // Ou se a animação de Wobble/Idle terminar
             if (this.idleTimer > 5.0) {
                 this.currentState = 'SITTING_DOWN';
                 this.fadeToAction('sit', 0.8);
-                
+
                 const onSitFinished = (e) => {
                     if (e.action === this.actions['sit']) {
                         this.currentState = 'SITTING';
