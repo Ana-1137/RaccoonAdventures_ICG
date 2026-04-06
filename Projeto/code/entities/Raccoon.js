@@ -14,12 +14,12 @@ const SETTINGS = {
     },
     physics: {
         gravity: 30,      // Gravidade equilibrada
-        jumpPower: 5.5,   // Salto curto (originalmente era puramente visual)
+        jumpPower: 5.5,   // Salto curto
         rayHeight: 0.5,   // raio para baixo a partir dos pés
         ceilingCheckHeight: 0.8, // teto
         maxStepHeight: 0.3, // degraus
-        ledgeDepth: 1.5,  // profundidade (mais tolerante para detetar o drop de 2.0)
-        ledgeOffset: 0.6, // mais próximo para bloquear antes de cair
+        ledgeDepth: 1.5,  // profundidade
+        ledgeOffset: 0.1, // Margem bem mais curta (Fase 12 Final)
     },
     jump: {
         standForward: 0,                // velocidade horizontal no salto parado
@@ -122,7 +122,7 @@ class Raccoon {
         this.isGrounded = true;
         this.raycaster = new THREE.Raycaster();
         this.floorObjects = []; // Cache opcional para performance
-        
+
         // ── Inércia de Salto ──
         this.jumpForwardSpeed = 0;
 
@@ -304,17 +304,17 @@ class Raccoon {
 
         // Durante o salto, preservamos a inércia horizontal mas permitimos rotação limitada
         if (this.currentState === STATES.JUMP) {
-             if (this.isGrounded) {
-                 // Aterrou! Voltamos a um estado neutro para forçar os handlers (Idle/Move) a fazerem o cross-fade correto
-                 this.currentState = 'LANDED'; 
-             } else {
-                 this.model.translateZ(this.jumpForwardSpeed * delta);
-                 // Permitir rodar um pouco no ar (Fase 12 Refinação)
-                 const rotate = SETTINGS.speed.rotate * 0.5 * delta;
-                 if (input.left) this.model.rotateY(rotate);
-                 if (input.right) this.model.rotateY(-rotate);
-                 return;
-             }
+            if (this.isGrounded) {
+                // Aterrou! Voltamos a um estado neutro para forçar os handlers (Idle/Move) a fazerem o cross-fade correto
+                this.currentState = 'LANDED';
+            } else {
+                this.model.translateZ(this.jumpForwardSpeed * delta);
+                // Permitir rodar um pouco no ar (Fase 12 Refinação)
+                const rotate = SETTINGS.speed.rotate * 0.5 * delta;
+                if (input.left) this.model.rotateY(rotate);
+                if (input.right) this.model.rotateY(-rotate);
+                return;
+            }
         }
 
         // --- BARREIRA DE VERTIGENS (Fase 12 Refinada) ---
@@ -378,7 +378,7 @@ class Raccoon {
             }
 
             this.fadeToAction(jumpAnim, SETTINGS.blend.toJump);
-            
+
             // Impulso vertical (Fase 12)
             this.verticalVelocity = SETTINGS.physics.jumpPower;
             this.isGrounded = false;
@@ -489,8 +489,8 @@ class Raccoon {
      */
     _handleIdle(delta) {
         // Não substituir IDLE se estivermos com Medo (TERRIFIED) ── Fase 12 Final
-        if (this.currentState !== STATES.IDLE && 
-            this.currentState !== STATES.WOBBLE && 
+        if (this.currentState !== STATES.IDLE &&
+            this.currentState !== STATES.WOBBLE &&
             this.currentState !== STATES.TERRIFIED) {
             // Wobble apenas se o último movimento foi corrida; senão vai para idle
             const targetAnim = (this.lastMoveState === 'RUN') ? 'wobble' : 'idle';
@@ -521,7 +521,7 @@ class Raccoon {
      */
     _handleGravityAndGround(delta) {
         // Obter candidatos a chão/teto
-        const collidables = this.scene.children.filter(obj => 
+        const collidables = this.scene.children.filter(obj =>
             obj !== this.model && obj.type !== 'Light' && obj.type !== 'AmbientLight'
         );
 
@@ -532,7 +532,7 @@ class Raccoon {
             headOrigin.y += 0.2; // Pequeno offset a partir do peito
             this.raycaster.set(headOrigin, new THREE.Vector3(0, 1, 0));
             const ceilingIntersects = this.raycaster.intersectObjects(collidables, true);
-            
+
             if (ceilingIntersects.length > 0 && ceilingIntersects[0].distance < SETTINGS.physics.ceilingCheckHeight) {
                 // Batemos no teto! Paramos a subida imediatamente
                 this.verticalVelocity = 0;
@@ -542,7 +542,7 @@ class Raccoon {
         // --- 2. DETEÇÃO DE CHÃO (Downward Raycast) ---
         const rayOrigin = this.model.position.clone();
         rayOrigin.y += SETTINGS.physics.rayHeight;
-        
+
         this.raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
         const intersects = this.raycaster.intersectObjects(collidables, true);
 
@@ -554,7 +554,7 @@ class Raccoon {
             // a) Estivermos a descer (verticalVelocity <= 0)
             // b) O chão estiver "muito perto" dos nossos pés (climbing ramps)
             const isClimbing = (diff > 0 && diff <= SETTINGS.physics.maxStepHeight);
-            const isLanding  = (this.verticalVelocity <= 0 && this.model.position.y <= groundY + 0.1);
+            const isLanding = (this.verticalVelocity <= 0 && this.model.position.y <= groundY + 0.1);
 
             if (isClimbing || isLanding) {
                 if (!this.isGrounded && this.verticalVelocity < 0) {
@@ -590,12 +590,12 @@ class Raccoon {
     _handleLedgeDetection(isMoving) {
         // Só detetamos vertigens se não estivermos sentado ou no ar por um salto voluntário
         if (this.currentState === STATES.JUMP || this.currentState === STATES.SITTING) {
-             return;
+            return;
         }
 
         const forward = new THREE.Vector3(0, 0, 1);
         forward.applyQuaternion(this.model.quaternion);
-        
+
         // Lançar raio à frente (Ledge Offset)
         const ledgeRayOrigin = this.model.position.clone();
         ledgeRayOrigin.add(forward.multiplyScalar(SETTINGS.physics.ledgeOffset));
