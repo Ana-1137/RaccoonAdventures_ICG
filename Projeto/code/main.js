@@ -108,6 +108,25 @@ plane.rotation.x = -Math.PI / 2;
 plane.receiveShadow = true;
 scene.add(plane);
 
+// Rampa e Plataforma de teste (Fase 12)
+const testPlatform = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 2, 10),
+    new THREE.MeshPhongMaterial({ color: 0x888888 })
+);
+testPlatform.position.set(0, 1, -15);
+testPlatform.castShadow = true;
+testPlatform.receiveShadow = true;
+scene.add(testPlatform);
+
+const testRamp = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 0.2, 10),
+    new THREE.MeshPhongMaterial({ color: 0x777777 })
+);
+testRamp.position.set(0, 0.6, -5);
+testRamp.rotation.x = -Math.PI / 12; // Inclinação suave para subir
+testRamp.receiveShadow = true;
+scene.add(testRamp);
+
 // Lidar com o redimensionamento da janela
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
