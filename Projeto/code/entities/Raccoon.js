@@ -1,38 +1,132 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
+// ─── Configuração Central ─────────────────────────────────────────────────────
+// Muda estes valores para ajustar velocidades, tempos e intensidade de lean
+const SETTINGS = {
+    model: {
+        scale: 0.1,   // fator de escala (1 unidade Three = 10 unidades FBX)
+    },
+    speed: {
+        walk: 6,    // unidades/s enquanto caminha
+        run: 15,   // unidades/s enquanto corre
+        rotate: 2.5,  // rad/s de rotação
+    },
+    jump: {
+        standForward: 0,                // velocidade horizontal no salto parado
+        walkForward: 7 * 0.1,         // velocidade horizontal no salto a andar
+        runForward: 16 * 0.1,         // velocidade horizontal no salto a correr
+        walkStartFrame: 15,            // frame inicial do sub-clip do jump a andar
+        walkEndTrimFrames: 15,          // frames a cortar no final (termina antes da pose estática)
+    },
+    lean: {
+        maxAngle: 0.35,  // radianos de inclinação máxima da coluna
+        smoothing: 0.1,   // lerp factor (0 = instantâneo, 1 = muito suave)
+    },
+    blend: {
+        toWalk: 0.4,   // duração do cross-fade walk
+        toRun: 0.5,
+        toLean: 0.4,   // transição para animação de curva
+        toIdle: 0.3,
+        toSit: 0.8,
+        toStand: 0.5,
+        toJump: 0.1,
+    },
+    afkTimeout: 5.0,  // segundos sem movimento antes de sentar
+};
+
+// ─── Estados possíveis da máquina de estados ──────────────────────────────────
+const STATES = {
+    IDLE: 'IDLE',
+    WALK: 'WALK',
+    RUN: 'RUN',
+    RUN_LEFT_TRANSITION: 'RUN_LEFT_TRANSITION',
+    RUN_RIGHT_TRANSITION: 'RUN_RIGHT_TRANSITION',
+    WOBBLE: 'WOBBLE',
+    JUMP: 'JUMP',
+    SITTING: 'SITTING',
+    SITTING_DOWN: 'SITTING_DOWN',
+    STANDING_UP: 'STANDING_UP',
+};
+
+// ─── Mapeamento de animações FBX ─────────────────────────────────────────────
+// Adicionar uma nova animação é tão simples como adicionar uma linha aqui.
+const ANIM_FILES = [
+    { name: 'idle', file: 'Idle.fbx' },
+    { name: 'wobble', file: 'Wobbling.fbx' },
+    { name: 'walk', file: 'Female Walk.fbx' },
+    { name: 'run', file: 'Fast Run.fbx' },
+    { name: 'run_left', file: 'Running Left Turn.fbx' },
+    { name: 'run_right', file: 'Running Right Turn.fbx' },
+    { name: 'jump_stand', file: 'Jumping.fbx' },
+    { name: 'jump_run', file: 'Jump.fbx' },
+    { name: 'sit', file: 'Stand To Sit.fbx' },
+    { name: 'stand', file: 'Sit To Stand.fbx' },
+    { name: 'terrified', file: 'Terrified.fbx' },
+];
+
+/** Animações que devem tocar apenas uma vez e parar no último frame. */
+const ONE_SHOT_ANIMS = new Set(['sit', 'stand', 'jump_stand', 'jump_run', 'jump_walk', 'run_left', 'run_right']);
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Classe que representa o guaxinim jogável.
+ * Gere o modelo 3D, o mixer de animações e a máquina de estados de movimento.
+ */
 class Raccoon {
+    /**
+     * @param {THREE.Scene} scene - A cena Three.js onde o modelo será adicionado.
+     */
     constructor(scene) {
         this.scene = scene;
+
+        /** @type {THREE.Group|null} */
         this.model = null;
+
+        /** @type {THREE.AnimationMixer|null} */
         this.mixer = null;
 
+        /** @type {Object.<string, THREE.AnimationAction>} */
         this.actions = {};
-        this.activeAction = null;
-        this.currentState = 'IDLE';
-        this.idleTimer = 0;
-        this.lastMoveState = null;
-        this.wasJumping = false;
-        this.previousLeanSide = 'NONE'; // Adicionado para evitar re-triggers 
 
-        // Procedural Lean 
-        this.leanAmount = 0;
-        this.targetLean = 0;
+        /** @type {THREE.AnimationAction|null} */
+        this.activeAction = null;
+
+        // ── Estado da máquina de estados ──
+        this.currentState = STATES.IDLE;
+        this.lastMoveState = null;   // 'RUN' | 'WALK' | null — determina wobble vs idle
+        this.idleTimer = 0;      // segundos sem movimento
+        this.wasJumping = false;  // evita disparar salto em todos os frames
+        this.previousLeanSide = 'NONE'; // evita re-disparar a animação de curva
+
+        // ── Inclinação Procedural (Spine Lean) ──
+        this.leanAmount = 0; // valor atual interpolado
+        this.targetLean = 0; // alvo de inclinação
+        /** @type {THREE.Bone|null} */
         this.spine = null;
 
-        this.modelLoaded = new Promise(resolve => {
-            this.loadModel(resolve);
-        });
-        console.log("Raccoon constructor loaded", this.modelLoaded);
+        // ── Inércia de Salto ──
+        this.jumpForwardSpeed = 0;
+
+        /** Promessa resolvida quando o modelo e todas as animações estiverem carregados. */
+        this.modelLoaded = new Promise(resolve => this._loadModel(resolve));
     }
 
-    loadModel(resolve) {
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  CARREGAMENTO
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Carrega o modelo FBX e todas as animações.
+     * @param {Function} resolve - Callback a chamar quando tudo estiver pronto.
+     */
+    _loadModel(resolve) {
         const loader = new FBXLoader();
         loader.load('../elements/Raccoon.fbx', (fbx) => {
             this.model = fbx;
-            this.model.name = "guaxinim";
-
-            this.model.scale.set(0.1, 0.1, 0.1);
+            this.model.name = 'guaxinim';
+            this.model.scale.setScalar(SETTINGS.model.scale);
             this.model.position.set(0, 0, 0);
 
             this.model.traverse((child) => {
@@ -40,100 +134,103 @@ class Raccoon {
                     child.castShadow = true;
                     child.receiveShadow = true;
                 }
-                // Encontrar o osso da coluna para inclinação procedural 
+                // Guardar referência ao osso da coluna para lean procedural
                 if (child.isBone && child.name.includes('Spine')) {
                     this.spine = child;
                 }
             });
 
             this.scene.add(this.model);
-
             this.mixer = new THREE.AnimationMixer(this.model);
 
-            // Carregar Animações FBX
-            const animLoader = new FBXLoader();
-            const animationsPath = '../animations/';
-
-            const loadAnim = (name, file) => {
-                return new Promise((resolve) => {
-                    animLoader.load(animationsPath + file, (animFbx) => {
-                        let clip = animFbx.animations[0];
-
-                        // One-shot para curvas : Agora usamos curvas apenas como transição
-                        if (name === 'run_left' || name === 'run_right') {
-                            const action = this.mixer.clipAction(clip);
-                            action.name = name;
-                            action.loop = THREE.LoopOnce;
-                            action.clampWhenFinished = true;
-                            this.actions[name] = action;
-                            resolve();
-                            return;
-                        }
-
-                        const action = this.mixer.clipAction(clip);
-                        action.name = name;
-
-                        if (name === 'sit' || name === 'stand' || name === 'jump_stand' || name === 'jump_run' || name === 'jump_walk') {
-                            action.loop = THREE.LoopOnce;
-                            action.clampWhenFinished = true;
-                        }
-                        this.actions[name] = action;
-                        resolve();
-                    });
-                });
-            };
-
-            Promise.all([
-                loadAnim('idle', 'Idle.fbx'),
-                loadAnim('wobble', 'Wobbling.fbx'),
-                loadAnim('walk', 'Female Walk.fbx'),
-                loadAnim('run', 'Fast Run.fbx'),
-                loadAnim('run_left', 'Running Left Turn.fbx'),
-                loadAnim('run_right', 'Running Right Turn.fbx'),
-                loadAnim('jump_stand', 'Jumping.fbx'),
-                loadAnim('jump_run', 'Jump.fbx'),
-                loadAnim('sit', 'Stand To Sit.fbx'),
-                loadAnim('stand', 'Sit To Stand.fbx'),
-                loadAnim('terrified', 'Terrified.fbx')
-            ]).then(() => {
-                // Criar a variação de salto a andar (clipped) - 
-                const baseJumpClip = this.actions['jump_stand'].getClip();
-                const endFrame = Math.floor(baseJumpClip.duration * 30) - 15; // Corte final para evitar paragem visual
-                const jumpWalkClip = THREE.AnimationUtils.subclip(baseJumpClip, 'jump_walk', 15, endFrame, 30);
-                const jumpWalkAction = this.mixer.clipAction(jumpWalkClip);
-                jumpWalkAction.loop = THREE.LoopOnce;
-                jumpWalkAction.clampWhenFinished = true;
-                this.actions['jump_walk'] = jumpWalkAction;
-
-                this.currentState = 'SITTING';
-                if (this.actions['sit']) {
-                    this.activeAction = this.actions['sit'];
-                    this.activeAction.play();
-                    this.activeAction.paused = true;
-                    this.activeAction.time = this.activeAction.getClip().duration;
-                }
-                if (resolve) resolve();
-            });
+            this._loadAnimations(resolve);
         });
     }
 
+    /**
+     * Carrega todas as animações definidas em ANIM_FILES e cria os sub-clips derivados.
+     * @param {Function} resolve
+     */
+    _loadAnimations(resolve) {
+        const animLoader = new FBXLoader();
+        const basePath = '../animations/';
+
+        const loadOne = ({ name, file }) => new Promise((done) => {
+            animLoader.load(basePath + file, (animFbx) => {
+                const clip = animFbx.animations[0];
+                const action = this.mixer.clipAction(clip);
+                action.name = name;
+
+                if (ONE_SHOT_ANIMS.has(name)) {
+                    action.loop = THREE.LoopOnce;
+                    action.clampWhenFinished = true;
+                }
+
+                this.actions[name] = action;
+                done();
+            });
+        });
+
+        Promise.all(ANIM_FILES.map(loadOne)).then(() => {
+            this._buildDerivedClips();
+            this._initStartingState();
+            resolve();
+        });
+    }
+
+    /**
+     * Cria variações de clips derivadas de animações base (e.g. jump_walk = jump_stand recortado).
+     */
+    _buildDerivedClips() {
+        const baseClip = this.actions['jump_stand'].getClip();
+        const totalFrames = Math.floor(baseClip.duration * 30);
+        const { walkStartFrame, walkEndTrimFrames } = SETTINGS.jump;
+        const endFrame = totalFrames - walkEndTrimFrames;
+
+        const walkClip = THREE.AnimationUtils.subclip(baseClip, 'jump_walk', walkStartFrame, endFrame, 30);
+        const walkAction = this.mixer.clipAction(walkClip);
+        walkAction.loop = THREE.LoopOnce;
+        walkAction.clampWhenFinished = true;
+        this.actions['jump_walk'] = walkAction;
+    }
+
+    /**
+     * Coloca o guaxinim no estado inicial: sentado no chão.
+     */
+    _initStartingState() {
+        this.currentState = STATES.SITTING;
+        const sitAction = this.actions['sit'];
+        if (sitAction) {
+            this.activeAction = sitAction;
+            this.activeAction.play();
+            this.activeAction.paused = true;
+            this.activeAction.time = sitAction.getClip().duration;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  TRANSIÇÃO DE ANIMAÇÕES
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Faz cross-fade suave para uma nova animação.
+     * @param {string}  name      - Chave da animação em `this.actions`.
+     * @param {number}  duration  - Duração do cross-fade em segundos.
+     * @param {boolean} [syncTime=false] - Se true, sincroniza a fase do ciclo (Locomotion Syncing).
+     */
     fadeToAction(name, duration, syncTime = false) {
         if (!this.actions[name] || this.activeAction === this.actions[name]) return;
 
         const previousAction = this.activeAction;
         this.activeAction = this.actions[name];
 
+        // Calc ratio before switching references
         let ratio = 0;
         if (syncTime && previousAction) {
-            // Sincronização de Passos (Locomotion Syncing):
-            // Calcula o progresso atual (%) da animação anterior para aplicar à nova
-            const prevClip = previousAction.getClip();
-            ratio = previousAction.time / prevClip.duration;
+            ratio = previousAction.time / previousAction.getClip().duration;
         }
 
-        if (previousAction) {
-            previousAction.fadeOut(duration);
-        }
+        previousAction?.fadeOut(duration);
 
         this.activeAction
             .reset()
@@ -143,194 +240,242 @@ class Raccoon {
             .play();
 
         if (syncTime) {
-            const newClip = this.activeAction.getClip();
-            this.activeAction.time = ratio * newClip.duration;
+            this.activeAction.time = ratio * this.activeAction.getClip().duration;
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  LOOP PRINCIPAL
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Chamado a cada frame pelo loop de animação.
+     * @param {number} delta     - Tempo desde o último frame (segundos).
+     * @param {Object} keyStates - Estado das teclas em { w, a, s, d, shift, space }.
+     */
     update(delta, keyStates) {
-        if (!this.mixer || !this.model || !this.actions['idle']) {
-            return;
-        }
+        if (!this.mixer || !this.model || !this.actions['idle']) return;
 
         this.mixer.update(delta);
 
-        const isMoving = keyStates.w || keyStates.s || keyStates.a || keyStates.d;
-        const isRunning = isMoving && keyStates.shift;
-        const isJumping = keyStates.space;
+        // Derivar intenções a partir do input (abstração de teclas)
+        const input = {
+            forward: keyStates.w,
+            backward: keyStates.s,
+            left: keyStates.a,
+            right: keyStates.d,
+            run: keyStates.shift,
+            jump: keyStates.space,
+        };
+        const isMoving = input.forward || input.backward || input.left || input.right;
+        const isRunning = isMoving && input.run;
 
-        // Se houver qualquer input, resetamos o timer de AFK
-        if (isMoving || isJumping) {
-            this.idleTimer = 0;
+        if (isMoving || input.jump) this.idleTimer = 0;
+
+        this._applyProceduralLean(isRunning, input);
+        this._handleJump(isRunning, isMoving, input);
+
+        // Guardar bloquear durante salto ou transições críticas
+        if (this.currentState === STATES.JUMP) {
+            this.model.translateZ(this.jumpForwardSpeed * delta);
+            return;
         }
+        if ([STATES.SITTING_DOWN, STATES.STANDING_UP].includes(this.currentState)) return;
 
-        // --- SISTEMA DE INCLINAÇÃO V2  ---
-        // Apenas inclinar se estiver a correr ou a andar rápido
-        if (isRunning && isMoving) {
-            // A = Esquerda (Inclinamos aprox. -20 graus), D = Direita
-            if (keyStates.a) this.targetLean = -0.35;
-            else if (keyStates.d) this.targetLean = 0.35;
+        this._handleSitting(isMoving, input.jump);
+        if (this.currentState === STATES.SITTING) return;
+
+        if (isMoving) {
+            this._handleMovement(delta, isRunning, input);
+        } else {
+            this._handleIdle(delta);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  SUB-SISTEMAS (métodos privados)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Calcula e aplica a inclinação procedural da coluna durante curvas a alta velocidade.
+     * @param {boolean} isRunning
+     * @param {Object}  input
+     */
+    _applyProceduralLean(isRunning, input) {
+        if (isRunning) {
+            if (input.left) this.targetLean = -SETTINGS.lean.maxAngle;
+            else if (input.right) this.targetLean = SETTINGS.lean.maxAngle;
             else this.targetLean = 0;
         } else {
             this.targetLean = 0;
         }
 
-        // Suavizar a inclinação
-        this.leanAmount = THREE.MathUtils.lerp(this.leanAmount, this.targetLean, 0.1);
+        this.leanAmount = THREE.MathUtils.lerp(this.leanAmount, this.targetLean, SETTINGS.lean.smoothing);
+        if (this.spine) this.spine.rotation.z = this.leanAmount;
+    }
 
-        // Aplicar APENAS ao osso da coluna (para não afetar as patas)
-        if (this.spine) {
-            this.spine.rotation.z = this.leanAmount;
-        }
+    /**
+     * Gere o salto: disparo único, escolha de animação e velocidade de inércia.
+     * @param {boolean} isRunning
+     * @param {boolean} isMoving
+     * @param {Object}  input
+     */
+    _handleJump(isRunning, isMoving, input) {
+        const canJump =
+            input.jump &&
+            !this.wasJumping &&
+            ![STATES.JUMP, STATES.SITTING, STATES.SITTING_DOWN, STATES.STANDING_UP].includes(this.currentState);
 
-        // --- SISTEMA DE ESTADOS ---
+        if (canJump) {
+            this.currentState = STATES.JUMP;
 
-        // 1. Saltando (Lógica dinâmica )
-        if (isJumping && !this.wasJumping &&
-            this.currentState !== 'JUMP' &&
-            this.currentState !== 'SITTING' &&
-            this.currentState !== 'SITTING_DOWN' &&
-            this.currentState !== 'STANDING_UP') {
-
-            this.currentState = 'JUMP';
-
-            // Escolher animação e velocidade de balanço
             let jumpAnim = 'jump_stand';
-            this.jumpForwardSpeed = 0;
+            this.jumpForwardSpeed = SETTINGS.jump.standForward;
 
             if (isRunning) {
                 jumpAnim = 'jump_run';
-                this.jumpForwardSpeed = 16 * 0.1; // Velocidade de corrida
+                this.jumpForwardSpeed = SETTINGS.jump.runForward;
             } else if (isMoving) {
                 jumpAnim = 'jump_walk';
-                this.jumpForwardSpeed = 7 * 0.1; // Velocidade de caminhada
+                this.jumpForwardSpeed = SETTINGS.jump.walkForward;
             }
 
-            this.fadeToAction(jumpAnim, 0.1);
+            this.fadeToAction(jumpAnim, SETTINGS.blend.toJump);
 
             const onJumpFinished = (e) => {
                 if (e.action === this.actions[jumpAnim]) {
-                    this.currentState = 'IDLE';
+                    this.currentState = STATES.IDLE;
                     this.mixer.removeEventListener('finished', onJumpFinished);
                 }
             };
             this.mixer.addEventListener('finished', onJumpFinished);
         }
-        this.wasJumping = isJumping;
 
-        // Manter inércia durante o salto ( Fix: removido o multiplicador * 60 excessivo)
-        if (this.currentState === 'JUMP') {
-            this.model.translateZ(this.jumpForwardSpeed * delta);
-            return; // Bloqueia rotação e novos inputs de movimento
+        this.wasJumping = input.jump;
+    }
+
+    /**
+     * Gere a lógica de sentar/levantar quando o personagem está parado durante muito tempo.
+     * @param {boolean} isMoving
+     * @param {boolean} wantsJump
+     */
+    _handleSitting(isMoving, wantsJump) {
+        if (this.currentState !== STATES.SITTING) return;
+
+        if (isMoving || wantsJump) {
+            this.currentState = STATES.STANDING_UP;
+            this.fadeToAction('stand', SETTINGS.blend.toStand);
+
+            const onStandFinished = (e) => {
+                if (e.action === this.actions['stand']) {
+                    this.currentState = STATES.IDLE;
+                    this.mixer.removeEventListener('finished', onStandFinished);
+                }
+            };
+            this.mixer.addEventListener('finished', onStandFinished);
         }
+    }
 
-        // 2. Sentando/Levantando
-        if (this.currentState === 'SITTING') {
-            if (isMoving || isJumping) {
-                this.currentState = 'STANDING_UP';
-                this.fadeToAction('stand', 0.5);
+    /**
+     * Aplica movimento ao modelo e escolhe a animação correcta (walk/run/turn).
+     * @param {number}  delta
+     * @param {boolean} isRunning
+     * @param {Object}  input
+     */
+    _handleMovement(delta, isRunning, input) {
+        this.idleTimer = 0;
+
+        const speed = (isRunning ? SETTINGS.speed.run : SETTINGS.speed.walk) * delta * SETTINGS.model.scale;
+        const rotate = SETTINGS.speed.rotate * delta;
+
+        if (input.forward) this.model.translateZ(speed);
+        if (input.backward) this.model.translateZ(-speed);
+        if (input.left) this.model.rotateY(rotate);
+        if (input.right) this.model.rotateY(-rotate);
+
+        if (isRunning) {
+            this._handleRunningAnimation(input);
+            this.lastMoveState = 'RUN';
+        } else {
+            if (this.currentState !== STATES.WALK) {
+                this.fadeToAction('walk', SETTINGS.blend.toWalk, true);
+                this.currentState = STATES.WALK;
+            }
+            this.lastMoveState = 'WALK';
+        }
+    }
+
+    /**
+     * Escolhe entre correr a direito, virar à esquerda ou virar à direita,
+     * usando one-shot + lean procedural para evitar o efeito "disco riscado".
+     * @param {Object} input
+     */
+    _handleRunningAnimation(input) {
+        if (input.left) {
+            if (this.currentState !== STATES.RUN_LEFT_TRANSITION && this.previousLeanSide !== 'LEFT') {
+                this.fadeToAction('run_left', SETTINGS.blend.toLean, true);
+                this.currentState = STATES.RUN_LEFT_TRANSITION;
+                this.previousLeanSide = 'LEFT';
 
                 const onFinished = (e) => {
-                    if (e.action === this.actions['stand']) {
-                        this.currentState = 'IDLE';
+                    if (e.action === this.actions['run_left']) {
+                        this.fadeToAction('run', SETTINGS.blend.toRun, true);
+                        this.currentState = STATES.RUN;
                         this.mixer.removeEventListener('finished', onFinished);
                     }
                 };
                 this.mixer.addEventListener('finished', onFinished);
             }
-            return; // Bloqueia movimento enquanto sentado
-        }
+        } else if (input.right) {
+            if (this.currentState !== STATES.RUN_RIGHT_TRANSITION && this.previousLeanSide !== 'RIGHT') {
+                this.fadeToAction('run_right', SETTINGS.blend.toLean, true);
+                this.currentState = STATES.RUN_RIGHT_TRANSITION;
+                this.previousLeanSide = 'RIGHT';
 
-        if (this.currentState === 'STANDING_UP' || this.currentState === 'SITTING_DOWN' || this.currentState === 'JUMP') {
-            return; // Bloqueia input durante transições críticas ou salto
-        }
-
-        // 3. Movimento Ativo
-        if (isMoving) {
-            this.idleTimer = 0;
-            const moveSpeed = (isRunning ? 15 : 6) * delta * 0.1;
-            const rotateSpeed = 2.5 * delta;
-
-            if (keyStates.w) this.model.translateZ(moveSpeed);
-            if (keyStates.s) this.model.translateZ(-moveSpeed);
-            if (keyStates.a) this.model.rotateY(rotateSpeed);
-            if (keyStates.d) this.model.rotateY(-rotateSpeed);
-
-            if (isRunning) {
-                // Curvas durante a corrida (One-shot transition + Procedural Lean)
-                if (keyStates.a) {
-                    if (this.currentState !== 'RUN_LEFT_TRANSITION' && this.previousLeanSide !== 'LEFT') {
-                        this.fadeToAction('run_left', 0.4, true);
-                        this.currentState = 'RUN_LEFT_TRANSITION';
-                        this.previousLeanSide = 'LEFT';
-
-                        // Quando a animação de curva (One-Shot) terminar, voltamos para o RUN estável (PÉS)
-                        const onLeanFinished = (e) => {
-                            if (e.action === this.actions['run_left']) {
-                                this.fadeToAction('run', 0.4, true);
-                                this.currentState = 'RUN';
-                                this.mixer.removeEventListener('finished', onLeanFinished);
-                            }
-                        };
-                        this.mixer.addEventListener('finished', onLeanFinished);
-                    }
-                } else if (keyStates.d) {
-                    if (this.currentState !== 'RUN_RIGHT_TRANSITION' && this.previousLeanSide !== 'RIGHT') {
-                        this.fadeToAction('run_right', 0.4, true);
-                        this.currentState = 'RUN_RIGHT_TRANSITION';
-                        this.previousLeanSide = 'RIGHT';
-
-                        const onLeanFinished = (e) => {
-                            if (e.action === this.actions['run_right']) {
-                                this.fadeToAction('run', 0.4, true);
-                                this.currentState = 'RUN';
-                                this.mixer.removeEventListener('finished', onLeanFinished);
-                            }
-                        };
-                        this.mixer.addEventListener('finished', onLeanFinished);
-                    }
-                } else {
-                    if (this.currentState !== 'RUN') {
-                        this.fadeToAction('run', 0.5, true);
-                        this.currentState = 'RUN';
-                        this.previousLeanSide = 'NONE';
-                    }
-                }
-                this.lastMoveState = 'RUN';
-            } else {
-                if (this.currentState !== 'WALK') {
-                    this.fadeToAction('walk', 0.4, true);
-                    this.currentState = 'WALK';
-                }
-                this.lastMoveState = 'WALK';
-            }
-        }
-        // 4. Parado (AFK Logic)
-        else {
-            if (this.currentState !== 'IDLE' && this.currentState !== 'WOBBLE') {
-                // Escolher entre wobble (cansado) ou idle (calmo)
-                const targetAnim = (this.lastMoveState === 'RUN') ? 'wobble' : 'idle';
-                this.fadeToAction(targetAnim, 0.3);
-                this.currentState = targetAnim.toUpperCase();
-            }
-
-            this.idleTimer += delta;
-
-            // Sentar apenas se estiver AFK por algum tempo (ex: 5 segundos)
-            // Ou se a animação de Wobble/Idle terminar
-            if (this.idleTimer > 5.0) {
-                this.currentState = 'SITTING_DOWN';
-                this.fadeToAction('sit', 0.8);
-
-                const onSitFinished = (e) => {
-                    if (e.action === this.actions['sit']) {
-                        this.currentState = 'SITTING';
-                        this.lastMoveState = null;
-                        this.mixer.removeEventListener('finished', onSitFinished);
+                const onFinished = (e) => {
+                    if (e.action === this.actions['run_right']) {
+                        this.fadeToAction('run', SETTINGS.blend.toRun, true);
+                        this.currentState = STATES.RUN;
+                        this.mixer.removeEventListener('finished', onFinished);
                     }
                 };
-                this.mixer.addEventListener('finished', onSitFinished);
+                this.mixer.addEventListener('finished', onFinished);
             }
+        } else {
+            if (this.currentState !== STATES.RUN) {
+                this.fadeToAction('run', SETTINGS.blend.toRun, true);
+                this.currentState = STATES.RUN;
+                this.previousLeanSide = 'NONE';
+            }
+        }
+    }
+
+    /**
+     * Gere o estado de repouso: idle → wobble → sentar (AFK).
+     * @param {number} delta
+     */
+    _handleIdle(delta) {
+        if (this.currentState !== STATES.IDLE && this.currentState !== STATES.WOBBLE) {
+            // Wobble apenas se o último movimento foi corrida; senão vai para idle
+            const targetAnim = (this.lastMoveState === 'RUN') ? 'wobble' : 'idle';
+            this.fadeToAction(targetAnim, SETTINGS.blend.toIdle);
+            this.currentState = targetAnim.toUpperCase();
+        }
+
+        this.idleTimer += delta;
+
+        if (this.idleTimer > SETTINGS.afkTimeout) {
+            this.currentState = STATES.SITTING_DOWN;
+            this.fadeToAction('sit', SETTINGS.blend.toSit);
+
+            const onSitFinished = (e) => {
+                if (e.action === this.actions['sit']) {
+                    this.currentState = STATES.SITTING;
+                    this.lastMoveState = null;
+                    this.mixer.removeEventListener('finished', onSitFinished);
+                }
+            };
+            this.mixer.addEventListener('finished', onSitFinished);
         }
     }
 }
