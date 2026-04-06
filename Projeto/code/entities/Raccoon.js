@@ -45,10 +45,19 @@ class Raccoon {
             const loadAnim = (name, file) => {
                 return new Promise((resolve) => {
                     animLoader.load(animationsPath + file, (animFbx) => {
-                        const clip = animFbx.animations[0];
+                        let clip = animFbx.animations[0];
+
+                        // Sub-clipping para curvas (Fase 8): Cortar o início para loop perfeito
+                        if (name === 'run_left' || name === 'run_right') {
+                            const totalFrames = Math.floor(clip.duration * 30);
+                            // Cortamos os primeiros 15 frames (transição) e usamos o resto
+                            clip = THREE.AnimationUtils.subclip(clip, name, 15, totalFrames, 30);
+                        }
+
                         const action = this.mixer.clipAction(clip);
                         action.name = name;
-                        if (name === 'sit' || name === 'stand') {
+                        
+                        if (name === 'sit' || name === 'stand' || name === 'jump_stand' || name === 'jump_run' || name === 'jump_walk') {
                             action.loop = THREE.LoopOnce;
                             action.clampWhenFinished = true;
                         }
@@ -65,12 +74,20 @@ class Raccoon {
                 loadAnim('run', 'Fast Run.fbx'),
                 loadAnim('run_left', 'Running Left Turn.fbx'),
                 loadAnim('run_right', 'Running Right Turn.fbx'),
-                loadAnim('jump', 'Jumping.fbx'),
+                loadAnim('jump_stand', 'Jumping.fbx'),
+                loadAnim('jump_run', 'Jump.fbx'),
                 loadAnim('sit', 'Stand To Sit.fbx'),
                 loadAnim('stand', 'Sit To Stand.fbx'),
                 loadAnim('terrified', 'Terrified.fbx')
             ]).then(() => {
-                // Iniciar sentado, conforme solicitado
+                // Criar a variação de salto a andar (clipped) - Fase 9
+                const baseJumpClip = this.actions['jump_stand'].getClip();
+                const jumpWalkClip = THREE.AnimationUtils.subclip(baseJumpClip, 'jump_walk', 8, Math.floor(baseJumpClip.duration * 30), 30);
+                const jumpWalkAction = this.mixer.clipAction(jumpWalkClip);
+                jumpWalkAction.loop = THREE.LoopOnce;
+                jumpWalkAction.clampWhenFinished = true;
+                this.actions['jump_walk'] = jumpWalkAction;
+
                 this.currentState = 'SITTING';
                 if (this.actions['sit']) {
                      this.activeAction = this.actions['sit'];
@@ -119,18 +136,43 @@ class Raccoon {
 
         // --- SISTEMA DE ESTADOS ---
         
-        // 1. Saltando
-        if (isJumping && this.currentState !== 'JUMP' && this.currentState !== 'SITTING' && this.currentState !== 'SITTING_DOWN' && this.currentState !== 'STANDING_UP') {
+        // 1. Saltando (Lógica dinâmica Fase 9)
+        if (isJumping && !this.wasJumping && 
+            this.currentState !== 'JUMP' && 
+            this.currentState !== 'SITTING' && 
+            this.currentState !== 'SITTING_DOWN' && 
+            this.currentState !== 'STANDING_UP') {
+            
             this.currentState = 'JUMP';
-            this.fadeToAction('jump', 0.1);
+            
+            // Escolher animação e velocidade de balanço
+            let jumpAnim = 'jump_stand';
+            this.jumpForwardSpeed = 0;
+
+            if (isRunning) {
+                jumpAnim = 'jump_run';
+                this.jumpForwardSpeed = 16 * 0.1; // Velocidade de corrida
+            } else if (isMoving) {
+                jumpAnim = 'jump_walk';
+                this.jumpForwardSpeed = 7 * 0.1; // Velocidade de caminhada
+            }
+
+            this.fadeToAction(jumpAnim, 0.1);
             
             const onJumpFinished = (e) => {
-                if (e.action === this.actions['jump']) {
+                if (e.action === this.actions[jumpAnim]) {
                     this.currentState = 'IDLE';
                     this.mixer.removeEventListener('finished', onJumpFinished);
                 }
             };
             this.mixer.addEventListener('finished', onJumpFinished);
+        }
+        this.wasJumping = isJumping;
+
+        // Manter inércia durante o salto (Fase 9 Fix: removido o multiplicador * 60 excessivo)
+        if (this.currentState === 'JUMP') {
+            this.model.translateZ(this.jumpForwardSpeed * delta); 
+            return; // Bloqueia rotação e novos inputs de movimento
         }
 
         // 2. Sentando/Levantando
