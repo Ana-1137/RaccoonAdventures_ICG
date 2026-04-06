@@ -11,6 +11,14 @@ class Raccoon {
         this.activeAction = null;
         this.currentState = 'IDLE';
         this.idleTimer = 0;
+        this.lastMoveState = null;
+        this.wasJumping = false;
+        this.previousLeanSide = 'NONE'; // Adicionado para evitar re-triggers (Fase 11)
+        
+        // Procedural Lean (Fase 11)
+        this.leanAmount = 0;
+        this.targetLean = 0;
+        this.spine = null;
 
         this.modelLoaded = new Promise(resolve => {
             this.loadModel(resolve);
@@ -32,6 +40,10 @@ class Raccoon {
                     child.castShadow = true;
                     child.receiveShadow = true;
                 }
+                // Encontrar o osso da coluna para inclinação procedural (Fase 11)
+                if (child.isBone && child.name.includes('Spine')) {
+                    this.spine = child;
+                }
             });
 
             this.scene.add(this.model);
@@ -47,11 +59,15 @@ class Raccoon {
                     animLoader.load(animationsPath + file, (animFbx) => {
                         let clip = animFbx.animations[0];
 
-                        // Sub-clipping para curvas (Fase 8): Cortar o início para loop perfeito
+                        // One-shot para curvas (Fase 11): Agora usamos curvas apenas como transição
                         if (name === 'run_left' || name === 'run_right') {
-                            const totalFrames = Math.floor(clip.duration * 30);
-                            // Cortamos os primeiros 15 frames (transição) e usamos o resto
-                            clip = THREE.AnimationUtils.subclip(clip, name, 15, totalFrames, 30);
+                            const action = this.mixer.clipAction(clip);
+                            action.name = name;
+                            action.loop = THREE.LoopOnce;
+                            action.clampWhenFinished = true;
+                            this.actions[name] = action;
+                            resolve();
+                            return;
                         }
 
                         const action = this.mixer.clipAction(clip);
@@ -100,11 +116,19 @@ class Raccoon {
         });
     }
 
-    fadeToAction(name, duration) {
+    fadeToAction(name, duration, syncTime = false) {
         if (!this.actions[name] || this.activeAction === this.actions[name]) return;
         
         const previousAction = this.activeAction;
         this.activeAction = this.actions[name];
+
+        let ratio = 0;
+        if (syncTime && previousAction) {
+            // Sincronização de Passos (Locomotion Syncing):
+            // Calcula o progresso atual (%) da animação anterior para aplicar à nova
+            const prevClip = previousAction.getClip();
+            ratio = previousAction.time / prevClip.duration;
+        }
 
         if (previousAction) {
             previousAction.fadeOut(duration);
@@ -116,6 +140,11 @@ class Raccoon {
             .setEffectiveWeight(1)
             .fadeIn(duration)
             .play();
+
+        if (syncTime) {
+            const newClip = this.activeAction.getClip();
+            this.activeAction.time = ratio * newClip.duration;
+        }
     }
 
     update(delta, keyStates) {
@@ -132,6 +161,25 @@ class Raccoon {
         // Se houver qualquer input, resetamos o timer de AFK
         if (isMoving || isJumping) {
             this.idleTimer = 0;
+        }
+
+        // --- SISTEMA DE INCLINAÇÃO V2 (Fase 11) ---
+        // Apenas inclinar se estiver a correr ou a andar rápido
+        if (isRunning && isMoving) {
+            // A = Esquerda (Inclinamos aprox. -20 graus), D = Direita
+            if (keyStates.a) this.targetLean = -0.35; 
+            else if (keyStates.d) this.targetLean = 0.35; 
+            else this.targetLean = 0;
+        } else {
+            this.targetLean = 0;
+        }
+        
+        // Suavizar a inclinação
+        this.leanAmount = THREE.MathUtils.lerp(this.leanAmount, this.targetLean, 0.1);
+        
+        // Aplicar APENAS ao osso da coluna (para não afetar as patas)
+        if (this.spine) {
+            this.spine.rotation.z = this.leanAmount;
         }
 
         // --- SISTEMA DE ESTADOS ---
@@ -208,27 +256,49 @@ class Raccoon {
             if (keyStates.d) this.model.rotateY(-rotateSpeed);
 
             if (isRunning) {
-                // Curvas durante a corrida
+                // Curvas durante a corrida (Fase 11: One-shot transition + Procedural Lean)
                 if (keyStates.a) {
-                    if (this.currentState !== 'RUN_LEFT') {
-                        this.fadeToAction('run_left', 0.2);
-                        this.currentState = 'RUN_LEFT';
+                    if (this.currentState !== 'RUN_LEFT_TRANSITION' && this.previousLeanSide !== 'LEFT') {
+                        this.fadeToAction('run_left', 0.4, true);
+                        this.currentState = 'RUN_LEFT_TRANSITION';
+                        this.previousLeanSide = 'LEFT';
+                        
+                        // Quando a animação de curva (One-Shot) terminar, voltamos para o RUN estável (PÉS)
+                        const onLeanFinished = (e) => {
+                            if (e.action === this.actions['run_left']) {
+                                this.fadeToAction('run', 0.4, true);
+                                this.currentState = 'RUN';
+                                this.mixer.removeEventListener('finished', onLeanFinished);
+                            }
+                        };
+                        this.mixer.addEventListener('finished', onLeanFinished);
                     }
                 } else if (keyStates.d) {
-                    if (this.currentState !== 'RUN_RIGHT') {
-                        this.fadeToAction('run_right', 0.2);
-                        this.currentState = 'RUN_RIGHT';
+                    if (this.currentState !== 'RUN_RIGHT_TRANSITION' && this.previousLeanSide !== 'RIGHT') {
+                        this.fadeToAction('run_right', 0.4, true);
+                        this.currentState = 'RUN_RIGHT_TRANSITION';
+                        this.previousLeanSide = 'RIGHT';
+                        
+                        const onLeanFinished = (e) => {
+                            if (e.action === this.actions['run_right']) {
+                                this.fadeToAction('run', 0.4, true);
+                                this.currentState = 'RUN';
+                                this.mixer.removeEventListener('finished', onLeanFinished);
+                            }
+                        };
+                        this.mixer.addEventListener('finished', onLeanFinished);
                     }
                 } else {
                     if (this.currentState !== 'RUN') {
-                        this.fadeToAction('run', 0.2);
+                        this.fadeToAction('run', 0.5, true);
                         this.currentState = 'RUN';
+                        this.previousLeanSide = 'NONE';
                     }
                 }
                 this.lastMoveState = 'RUN';
             } else {
                 if (this.currentState !== 'WALK') {
-                    this.fadeToAction('walk', 0.2);
+                    this.fadeToAction('walk', 0.4, true);
                     this.currentState = 'WALK';
                 }
                 this.lastMoveState = 'WALK';
