@@ -20,6 +20,9 @@ const SETTINGS = {
         maxStepHeight: 0.3, // degraus
         ledgeDepth: 1.5,  // profundidade
         ledgeOffset: 0.1, // Margem bem mais curta (Fase 12 Final)
+        // ── Refinamento de Raycast (Fase 12 - Rampas) ──
+        maxLandingDistance: -1.5, // distância máxima de caída permitida em rampas (negativo = para baixo)
+        backfaceNormalThreshold: 0.1, // threshold da normal-Y para rejeitar backfaces (valores < isto = face de baixo)
     },
     jump: {
         standForward: 0,                // velocidade horizontal no salto parado
@@ -577,9 +580,27 @@ class Raccoon {
         rayOrigin.y += SETTINGS.physics.rayHeight;
 
         this.raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
-        const intersects = this.raycaster.intersectObjects(collidables, true)
-            .filter(hit => hit.point.y <= this.model.position.y + SETTINGS.physics.maxStepHeight);
-        //               ↑ ignorar qualquer chão que esteja muito acima dos pés (atravessamento de rampa)
+        const rawIntersects = this.raycaster.intersectObjects(collidables, true);
+
+        // ── Filtro sofisticado de hits do raycast ──────────────────────────────────
+        const intersects = rawIntersects.filter(hit => {
+            // 1. Rejeitar hits muito acima dos pés (atravessamento de rampa)
+            if (hit.point.y > this.model.position.y + SETTINGS.physics.maxStepHeight) {
+                return false;
+            }
+
+            // 2. Rejeitar hits da face de baixo de geometrias (backfaces)
+            if (hit.face) {
+                const worldNormal = hit.face.normal.clone()
+                    .transformDirection(hit.object.matrixWorld);
+                // Se a normal aponta para baixo (y < threshold), é uma face inferior → ignorar
+                if (worldNormal.y < SETTINGS.physics.backfaceNormalThreshold) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
 
         if (intersects.length > 0) {
             const groundY = intersects[0].point.y;
@@ -587,11 +608,10 @@ class Raccoon {
 
             // REFINAMENTO: Só fazemos snap ao chão se:
             // a) Estivermos a descer (verticalVelocity <= 0)
-            // b) O chão estiver "muito perto" dos nossos pés (climbing ramps) OU abaixo e próximo
+            // b) O chão estiver acima (climbing) ou abaixo até maxLandingDistance (deslizar em rampas)
             const isClimbing = (diff > 0 && diff <= SETTINGS.physics.maxStepHeight);
-            const isLanding = (this.verticalVelocity <= 0 && diff <= 0 && diff > -0.5);
-            //                                               ↑ só snap se chão está ABAIXO ou ao mesmo nível
-            //                                                              ↑ e não muito longe
+            const isLanding = (this.verticalVelocity <= 0 && diff <= 0 && diff >= SETTINGS.physics.maxLandingDistance);
+            //                 ↑ velocidade a diminuir       ↑ chão abaixo             ↑ não cai longe demais
 
             if (isClimbing || isLanding) {
                 if (!this.isGrounded && this.verticalVelocity < 0) {
