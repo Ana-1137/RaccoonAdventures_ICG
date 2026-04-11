@@ -436,7 +436,24 @@ class Raccoon {
         const speed = (isRunning ? SETTINGS.speed.run : SETTINGS.speed.walk) * delta * SETTINGS.model.scale;
         const rotate = SETTINGS.speed.rotate * delta;
 
-        if (input.forward) this.model.translateZ(speed);
+        // ── Ledge check preventivo ──────────────────────────────────
+        if (input.forward) {
+            const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.model.quaternion);
+            const probeOrigin = this.model.position.clone()
+                .add(forward.multiplyScalar(speed + SETTINGS.physics.ledgeOffset));
+            probeOrigin.y += 0.5;
+
+            const collidables = this.scene.children.filter(o => o !== this.model && o.type !== 'Light');
+            this.raycaster.set(probeOrigin, new THREE.Vector3(0, -1, 0));
+            const hits = this.raycaster.intersectObjects(collidables, true);
+
+            const isSafe = hits.length > 0 && (this.model.position.y - hits[0].point.y) < SETTINGS.physics.ledgeDepth;
+
+            if (isSafe) {
+                this.model.translateZ(speed); // só move se for seguro
+            }
+            // se não for seguro, não move — ponto final
+        }
         if (input.backward) this.model.translateZ(-speed);
         if (input.left) this.model.rotateY(rotate);
         if (input.right) this.model.rotateY(-rotate);
