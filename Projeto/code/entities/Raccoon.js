@@ -577,7 +577,9 @@ class Raccoon {
         rayOrigin.y += SETTINGS.physics.rayHeight;
 
         this.raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
-        const intersects = this.raycaster.intersectObjects(collidables, true);
+        const intersects = this.raycaster.intersectObjects(collidables, true)
+            .filter(hit => hit.point.y <= this.model.position.y + SETTINGS.physics.maxStepHeight);
+        //               ↑ ignorar qualquer chão que esteja muito acima dos pés (atravessamento de rampa)
 
         if (intersects.length > 0) {
             const groundY = intersects[0].point.y;
@@ -585,9 +587,11 @@ class Raccoon {
 
             // REFINAMENTO: Só fazemos snap ao chão se:
             // a) Estivermos a descer (verticalVelocity <= 0)
-            // b) O chão estiver "muito perto" dos nossos pés (climbing ramps)
+            // b) O chão estiver "muito perto" dos nossos pés (climbing ramps) OU abaixo e próximo
             const isClimbing = (diff > 0 && diff <= SETTINGS.physics.maxStepHeight);
-            const isLanding = (this.verticalVelocity <= 0 && this.model.position.y <= groundY + 0.1);
+            const isLanding = (this.verticalVelocity <= 0 && diff <= 0 && diff > -0.5);
+            //                                               ↑ só snap se chão está ABAIXO ou ao mesmo nível
+            //                                                              ↑ e não muito longe
 
             if (isClimbing || isLanding) {
                 if (!this.isGrounded && this.verticalVelocity < 0) {
