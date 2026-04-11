@@ -26,6 +26,7 @@ const SETTINGS = {
         // ── Deteção de Paredes (Fase 12 - Colisões Horizontais) ──
         wallCheckDistance: 0.35, // distância do raycast horizontal para a frente
         wallCheckHeight: 0.4, // altura do raycast horizontal em relação aos pés
+        wallNormalThreshold: 0.4, // threshold da normal-Y para distinguir paredes de rampas (< isto = parede)
     },
     jump: {
         standForward: 0,                // velocidade horizontal no salto parado
@@ -463,7 +464,19 @@ class Raccoon {
             const wallHits = this.raycaster.intersectObjects(collidables, true);
             
             if (wallHits.length > 0 && wallHits[0].distance <= SETTINGS.physics.wallCheckDistance) {
-                isWallBlocking = true; // Parede detetada à frente
+                // Verificar se é uma parede (superfície quase vertical) ou rampa (superfície inclinada)
+                const hit = wallHits[0];
+                if (hit.face) {
+                    const normalMatrix = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
+                    const worldNormal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize();
+                    // Só é parede se normal-Y < threshold (superfície quase vertical)
+                    if (worldNormal.y < SETTINGS.physics.wallNormalThreshold) {
+                        isWallBlocking = true; // Parede detetada à frente
+                    }
+                } else {
+                    // Se não temos info de face, assumir que é parede por segurança
+                    isWallBlocking = true;
+                }
             }
 
             if (isSafe && !isWallBlocking) {
