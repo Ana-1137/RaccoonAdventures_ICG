@@ -23,6 +23,9 @@ const SETTINGS = {
         // ── Refinamento de Raycast (Fase 12 - Rampas) ──
         maxLandingDistance: -1.5, // distância máxima de caída permitida em rampas (negativo = para baixo)
         backfaceNormalThreshold: 0.1, // threshold da normal-Y para rejeitar backfaces (valores < isto = face de baixo)
+        // ── Deteção de Paredes (Fase 12 - Colisões Horizontais) ──
+        wallCheckDistance: 0.35, // distância do raycast horizontal para a frente
+        wallCheckHeight: 0.4, // altura do raycast horizontal em relação aos pés
     },
     jump: {
         standForward: 0,                // velocidade horizontal no salto parado
@@ -452,10 +455,21 @@ class Raccoon {
 
             const isSafe = hits.length > 0 && (this.model.position.y - hits[0].point.y) < SETTINGS.physics.ledgeDepth;
 
-            if (isSafe) {
-                this.model.translateZ(speed); // só move se for seguro
+            // ── Wall check horizontal (deteção de paredes à frente) ──────────────────────────────────
+            let isWallBlocking = false;
+            const wallCheckOrigin = this.model.position.clone();
+            wallCheckOrigin.y += SETTINGS.physics.wallCheckHeight; // altura do raycast
+            this.raycaster.set(wallCheckOrigin, forward);
+            const wallHits = this.raycaster.intersectObjects(collidables, true);
+            
+            if (wallHits.length > 0 && wallHits[0].distance <= SETTINGS.physics.wallCheckDistance) {
+                isWallBlocking = true; // Parede detetada à frente
             }
-            // se não for seguro, não move — ponto final
+
+            if (isSafe && !isWallBlocking) {
+                this.model.translateZ(speed); // só move se for seguro E sem paredes
+            }
+            // se não for seguro ou há parede, não move — ponto final
         }
         if (input.backward) this.model.translateZ(-speed);
         if (input.left) this.model.rotateY(rotate);
