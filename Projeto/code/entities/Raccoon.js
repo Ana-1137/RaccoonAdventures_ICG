@@ -484,7 +484,49 @@ class Raccoon {
             }
             // se não for seguro ou há parede, não move — ponto final
         }
-        if (input.backward) this.model.translateZ(-speed);
+        
+        // ── Ledge check & Wall check para trás ──────────────────────────────────
+        if (input.backward) {
+            const backward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.model.quaternion);
+            backward.negate(); // Inverter para a direção oposta
+            const probeOrigin = this.model.position.clone()
+                .add(backward.multiplyScalar(speed + SETTINGS.physics.ledgeOffset));
+            probeOrigin.y += 0.5;
+
+            const collidables = this.scene.children.filter(o => o !== this.model && o.type !== 'Light');
+            this.raycaster.set(probeOrigin, new THREE.Vector3(0, -1, 0));
+            const hits = this.raycaster.intersectObjects(collidables, true);
+
+            const isSafe = hits.length > 0 && (this.model.position.y - hits[0].point.y) < SETTINGS.physics.ledgeDepth;
+
+            // ── Wall check horizontal (deteção de paredes atrás) ──────────────────────────────────
+            let isWallBlocking = false;
+            const wallCheckOrigin = this.model.position.clone();
+            wallCheckOrigin.y += SETTINGS.physics.wallCheckHeight; // altura do raycast
+            this.raycaster.set(wallCheckOrigin, backward);
+            const wallHits = this.raycaster.intersectObjects(collidables, true);
+            
+            if (wallHits.length > 0 && wallHits[0].distance <= SETTINGS.physics.wallCheckDistance) {
+                // Verificar se é uma parede (superfície quase vertical) ou rampa (superfície inclinada)
+                const hit = wallHits[0];
+                if (hit.face) {
+                    const normalMatrix = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
+                    const worldNormal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize();
+                    // Só é parede se normal-Y < threshold (superfície quase vertical)
+                    if (worldNormal.y < SETTINGS.physics.wallNormalThreshold) {
+                        isWallBlocking = true; // Parede detetada atrás
+                    }
+                } else {
+                    // Se não temos info de face, assumir que é parede por segurança
+                    isWallBlocking = true;
+                }
+            }
+
+            if (isSafe && !isWallBlocking) {
+                this.model.translateZ(-speed); // só move se for seguro E sem paredes
+            }
+            // se não for seguro ou há parede, não move — ponto final
+        }
         if (input.left) this.model.rotateY(rotate);
         if (input.right) this.model.rotateY(-rotate);
 
