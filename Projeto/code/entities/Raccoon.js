@@ -15,17 +15,17 @@ const SETTINGS = {
     physics: {
         gravity: 30,      // Gravidade equilibrada
         jumpPower: 5.5,   // Salto curto
-        rayHeight: 0.5,   // raio para baixo a partir dos pés
-        ceilingCheckHeight: 0.8, // teto
-        maxStepHeight: 0.3, // degraus
+        rayHeight: 0.6,   // raio para baixo a partir dos pés
+        ceilingCheckHeight: 0.5, // teto
+        maxStepHeight: 0.2, // degraus
         ledgeDepth: 1.5,  // profundidade
         ledgeOffset: 0.1, // Margem bem mais curta (Fase 12 Final)
         // ── Refinamento de Raycast (Fase 12 - Rampas) ──
         maxLandingDistance: -1.5, // distância máxima de caída permitida em rampas (negativo = para baixo)
         backfaceNormalThreshold: 0.1, // threshold da normal-Y para rejeitar backfaces (valores < isto = face de baixo)
         // ── Deteção de Paredes (Fase 12 - Colisões Horizontais) ──
-        wallCheckDistance: 0.35, // distância do raycast horizontal para a frente
-        wallCheckHeight: 0.4, // altura do raycast horizontal em relação aos pés
+        wallCheckDistance: 0.2, // distância do raycast horizontal para a frente
+        wallCheckHeight: 0.25, // altura do raycast horizontal em relação aos pés
         wallNormalThreshold: 0.4, // threshold da normal-Y para distinguir paredes de rampas (< isto = parede)
     },
     jump: {
@@ -604,7 +604,7 @@ class Raccoon {
 
         // --- 2. DETEÇÃO DE CHÃO (Downward Raycast) ---
         const rayOrigin = this.model.position.clone();
-        rayOrigin.y += SETTINGS.physics.rayHeight;
+        rayOrigin.y += 1.0; // Origem bem acima do personagem para evitar estar dentro da geometria
 
         this.raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
         const rawIntersects = this.raycaster.intersectObjects(collidables, true);
