@@ -605,8 +605,8 @@ class Raccoon {
 
             // 2. Rejeitar hits da face de baixo de geometrias (backfaces)
             if (hit.face) {
-                const worldNormal = hit.face.normal.clone()
-                    .transformDirection(hit.object.matrixWorld);
+                const normalMatrix = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
+                const worldNormal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize();
                 // Se a normal aponta para baixo (y < threshold), é uma face inferior → ignorar
                 if (worldNormal.y < SETTINGS.physics.backfaceNormalThreshold) {
                     return false;
