@@ -24,8 +24,8 @@ const SETTINGS = {
         maxLandingDistance: -1.5, // distância máxima de caída permitida em rampas (negativo = para baixo)
         backfaceNormalThreshold: 0.1, // threshold da normal-Y para rejeitar backfaces (valores < isto = face de baixo)
         // ── Deteção de Paredes (Fase 12 - Colisões Horizontais) ──
-        wallCheckDistance: 0.2, // distância do raycast horizontal para a frente
-        wallCheckHeight: 0.25, // altura do raycast horizontal em relação aos pés
+        wallCheckDistance: 0.1, // distância do raycast horizontal para a frente
+        wallCheckHeight: 0.18, // altura do raycast horizontal em relação aos pés
         wallNormalThreshold: 0.4, // threshold da normal-Y para distinguir paredes de rampas (< isto = parede)
     },
     jump: {
