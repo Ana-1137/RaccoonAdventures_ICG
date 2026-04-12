@@ -20,34 +20,65 @@ function createGround() {
     const textureLoader = new THREE.TextureLoader();
     
     // ── Textura Base (Relva) ──
-    const grassColor = textureLoader.load('../elements/textures/Default/Color.jpg');
-    const grassNormal = textureLoader.load('../elements/textures/Default/NormalGL.jpg');
-    const grassRoughness = textureLoader.load('../elements/textures/Default/Roughness.jpg');
+    const grassColor = textureLoader.load(
+        '../elements/textures/Default/Grass003_1K-JPG_Color.jpg',
+        undefined,
+        undefined,
+        (err) => console.error('Erro ao carregar textura de cor da relva:', err)
+    );
+    const grassNormal = textureLoader.load(
+        '../elements/textures/Default/Grass003_1K-JPG_NormalGL.jpg',
+        undefined,
+        undefined,
+        (err) => console.error('Erro ao carregar normal map da relva:', err)
+    );
+    const grassRoughness = textureLoader.load(
+        '../elements/textures/Default/Grass003_1K-JPG_Roughness.jpg',
+        undefined,
+        undefined,
+        (err) => console.error('Erro ao carregar roughness map da relva:', err)
+    );
     
     // Configurar wrapping e repeat para todas as texturas
     [grassColor, grassNormal, grassRoughness].forEach(texture => {
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(15, 15);
+        texture.repeat.set(30, 30);
     });
     
-    // Criar o material PBR para o chão
+    // Criar o material PBR para o chão — com cor branca explícita
     const groundMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,  // Branco explícito para não descolorir as texturas
         map: grassColor,
         normalMap: grassNormal,
         roughnessMap: grassRoughness,
         side: THREE.DoubleSide,
     });
     
-    // Criar o plano do chão
-    const groundGeometry = new THREE.PlaneGeometry(50, 50);
+    // Criar o plano do chão (30x30 para ser suficientemente grande)
+    const groundGeometry = new THREE.PlaneGeometry(30, 30);
     const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
     groundMesh.rotation.x = -Math.PI / 2;
     groundMesh.receiveShadow = true;
     
     // ── Textura Secundária (Terra da Fogueira) ──
-    const campfireColor = textureLoader.load('../elements/textures/Campfire/Color.jpg');
-    const campfireNormal = textureLoader.load('../elements/textures/Campfire/NormalGL.jpg');
-    const campfireRoughness = textureLoader.load('../elements/textures/Campfire/Roughness.jpg');
+    const campfireColor = textureLoader.load(
+        '../elements/textures/Campfire/Ground037_1K-JPG_Color.jpg',
+        undefined,
+        undefined,
+        (err) => console.error('Erro ao carregar textura de cor do campfire:', err)
+    );
+    const campfireNormal = textureLoader.load(
+        '../elements/textures/Campfire/Ground037_1K-JPG_NormalGL.jpg',
+        undefined,
+        undefined,
+        (err) => console.error('Erro ao carregar normal map do campfire:', err)
+    );
+    const campfireRoughness = textureLoader.load(
+        '../elements/textures/Campfire/Ground037_1K-JPG_Roughness.jpg',
+        undefined,
+        undefined,
+        (err) => console.error('Erro ao carregar roughness map do campfire:', err)
+    );
     
     // Configurar wrapping e repeat para o campfire
     [campfireColor, campfireNormal, campfireRoughness].forEach(texture => {
@@ -82,18 +113,20 @@ function createGround() {
     
     const alphaMapTexture = new THREE.CanvasTexture(alphaMapCanvas);
     
-    // Criar o material PBR com alphaMap para o campfire
+    // Criar o material PBR com alphaMap para o campfire — com depthWrite: false
     const campfireMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,  // Branco para não descolorir as texturas
         map: campfireColor,
         normalMap: campfireNormal,
         roughnessMap: campfireRoughness,
         alphaMap: alphaMapTexture,
         transparent: true,
+        depthWrite: false,  // Não bloqueia o render do chão base abaixo
         side: THREE.DoubleSide,
     });
     
     // Criar o plano do campfire (8x8, posicionado ligeiramente acima para evitar z-fighting)
-    const campfireGeometry = new THREE.PlaneGeometry(8, 8);
+    const campfireGeometry = new THREE.PlaneGeometry(3, 3);
     const campfireMesh = new THREE.Mesh(campfireGeometry, campfireMaterial);
     campfireMesh.position.y = 0.001; // Ligeiramente acima do chão
     campfireMesh.rotation.x = -Math.PI / 2;
