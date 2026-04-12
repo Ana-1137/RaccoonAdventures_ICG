@@ -296,6 +296,15 @@ class Raccoon {
 
         this.mixer.update(delta);
 
+        // ── Safety Reset: Validar estado da máquina de estados ──────────────────────────────────
+        // Se o currentState for inválido, resetar para IDLE (proteção contra estados corrompidos)
+        const validStates = Object.values(STATES);
+        if (!validStates.includes(this.currentState)) {
+            console.warn(`Estado inválido detetado: ${this.currentState}, resetando para IDLE`);
+            this.currentState = STATES.IDLE;
+            this.fadeToAction('idle', 0.2);
+        }
+
         // Derivar intenções a partir do input (abstração de teclas)
         const input = {
             forward: keyStates.w,
@@ -327,8 +336,8 @@ class Raccoon {
         // Durante o salto, preservamos a inércia horizontal mas permitimos rotação limitada
         if (this.currentState === STATES.JUMP) {
             if (this.isGrounded) {
-                // Aterrou! Voltamos a um estado neutro para forçar os handlers (Idle/Move) a fazerem o cross-fade correto
-                this.currentState = 'LANDED';
+                // Aterrou! Voltamos diretamente para IDLE sem estado intermédio
+                this.currentState = STATES.IDLE;
             } else {
                 this.model.translateZ(this.jumpForwardSpeed * delta);
                 // Permitir rodar um pouco no ar (Fase 12 Refinação)
@@ -641,6 +650,8 @@ class Raccoon {
             if (ceilingIntersects.length > 0 && ceilingIntersects[0].distance < SETTINGS.physics.ceilingCheckHeight) {
                 // Batemos no teto! Paramos a subida imediatamente
                 this.verticalVelocity = 0;
+                // Garantir que não fica preso em JUMP — deixar a gravidade resolver
+                this.isGrounded = false;
             }
         }
 
