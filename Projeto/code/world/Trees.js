@@ -7,15 +7,15 @@ const SETTINGS = {
     scale: {
         // Pinheiro (Evergreen)
         evergreen: {
-            trunk: 1.0,  // Escala do tronco
-            crown: 1.0,  // Escala da copa
-            crownOffsetY: 1.5, // Altura da copa sobre o tronco
+            trunk: 0.5,   // Escala do tronco (reduzido)
+            crown: 0.5,   // Escala da copa (reduzido)
+            crownOffsetY: 0.45, // Copa com ligeira sobreposição (não demasiada)
         },
         // Carvalho (Oak)
         oak: {
-            trunk: 1.2,
-            crown: 1.2,
-            crownOffsetY: 1.8,
+            trunk: 0.5,   // Igualado ao evergreen
+            crown: 0.5,   // Reduzido
+            crownOffsetY: 0.4, // Copa com ligeira sobreposição (não demasiada)
         },
     },
     
@@ -32,7 +32,7 @@ const SETTINGS = {
         oakCount: 5,         // Número de carvalhos
         areaRadius: 20,      // Raio da área de spawn (em unidades)
         minDistanceApart: 2.0, // Distância mínima entre árvores
-        groundY: 1.2,        // Altura Y onde as árvores spawnam (elevado acima do chão)
+        groundY: 0.5,        // Altura Y onde as árvores spawnam (ligeiramente acima do chão)
     },
 };
 
