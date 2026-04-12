@@ -361,7 +361,40 @@ class Raccoon {
                 // Aterrou! Voltamos diretamente para IDLE sem estado intermédio
                 this.currentState = STATES.IDLE;
             } else {
-                this.model.translateZ(this.jumpForwardSpeed * delta);
+                // ── Wall check durante o salto ──────────────────────────────────
+                let isWallInFront = false;
+                if (this.jumpForwardSpeed > 0) {
+                    // Calcular direção forward
+                    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.model.quaternion);
+                    const wallCheckOrigin = this.model.position.clone();
+                    wallCheckOrigin.y += SETTINGS.physics.wallCheckHeight;
+                    
+                    const collidables = this.scene.children.filter(o => o !== this.model && o.type !== 'Light');
+                    this.raycaster.set(wallCheckOrigin, forward);
+                    const wallHits = this.raycaster.intersectObjects(collidables, true);
+                    
+                    if (wallHits.length > 0 && wallHits[0].distance <= SETTINGS.physics.wallCheckDistance) {
+                        // Verificar se é parede (superfície quase vertical) ou rampa
+                        const hit = wallHits[0];
+                        if (hit.face) {
+                            const normalMatrix = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
+                            const worldNormal = hit.face.normal.clone().applyMatrix3(normalMatrix).normalize();
+                            if (worldNormal.y < SETTINGS.physics.wallNormalThreshold) {
+                                isWallInFront = true; // Parede detetada
+                            }
+                        } else {
+                            isWallInFront = true; // Sem info de face, assumir parede
+                        }
+                    }
+                }
+
+                // Aplicar movimento de inércia do salto (apenas se não há parede)
+                if (isWallInFront) {
+                    this.jumpForwardSpeed = 0; // Parar inércia horizontal ao atingir parede
+                } else {
+                    this.model.translateZ(this.jumpForwardSpeed * delta);
+                }
+
                 // Permitir rodar um pouco no ar (Fase 12 Refinação)
                 const rotate = SETTINGS.speed.rotate * 0.5 * delta;
                 if (input.left) this.model.rotateY(rotate);
