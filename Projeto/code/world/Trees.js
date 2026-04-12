@@ -7,15 +7,15 @@ const SETTINGS = {
     scale: {
         // Pinheiro (Evergreen)
         evergreen: {
-            trunk: 0.5,   // Escala do tronco (reduzido)
-            crown: 0.5,   // Escala da copa (reduzido)
-            crownOffsetY: 0.45, // Copa com ligeira sobreposição (não demasiada)
+            trunk: 0.5,   // Escala do tronco
+            crown: 0.5,   // Escala da copa
+            crownOffsetY: 0.45, // Altura da copa sobre o tronco
         },
         // Carvalho (Oak)
         oak: {
-            trunk: 0.5,   // Igualado ao evergreen
-            crown: 0.5,   // Reduzido
-            crownOffsetY: 0.4, // Copa com ligeira sobreposição (não demasiada)
+            trunk: 0.5,
+            crown: 0.5,
+            crownOffsetY: 0.4,
         },
     },
     
@@ -28,29 +28,36 @@ const SETTINGS = {
     
     // Spawn da floresta
     spawn: {
-        evergreenCount: 8,  // Número de pinheiros
-        oakCount: 5,         // Número de carvalhos
-        areaRadius: 20,      // Raio da área de spawn (em unidades)
+        maxEvergreens: 8,   // Número máximo de pinheiros
+        maxOaks: 5,         // Número máximo de carvalhos
+        areaRadius: 20,     // Raio da área de spawn (em unidades)
         minDistanceApart: 2.0, // Distância mínima entre árvores
-        groundY: 0.5,        // Altura Y onde as árvores spawnam (ligeiramente acima do chão)
+        groundY: 0.5,       // Altura Y onde as árvores spawnam
     },
 };
 
 // ─── Variáveis Globais ─────────────────────────────────────────────────────
-let loadedModels = {
+let loadedMeshes = {
     evergreenTrunk: null,
     evergreenCrown: null,
     oakTrunk: null,
     oakCrown: null,
 };
 
-let treeInstances = []; // Array com todas as árvores criadas (para update de animação)
+let instancedMeshes = {
+    trunkEvergreen: null,
+    crownEvergreen: null,
+    trunkOak: null,
+    crownOak: null,
+};
+
+let treeInstances = []; // Metadados de cada árvore para animação
 
 // ─── Funções Privadas ─────────────────────────────────────────────────────
 
 /**
- * Carrega todos os modelos GLB necessários para as árvores.
- * @returns {Promise} Promessa resolvida quando todos os modelos estiverem carregados.
+ * Carrega todos os modelos GLB e extrai geometria + material.
+ * @returns {Promise} Promessa resolvida quando todos os modelos estiverem carregados
  */
 function loadAllModels() {
     return new Promise((resolve) => {
@@ -65,96 +72,61 @@ function loadAllModels() {
 
         // Carregar copa do pinheiro
         loader.load('../elements/Copa_Tiered_Evergreen.glb', (gltf) => {
-            loadedModels.evergreenCrown = gltf.scene.clone();
+            loadedMeshes.evergreenCrown = extractFirstMesh(gltf);
             onLoaded();
         });
 
         // Carregar tronco do pinheiro
         loader.load('../elements/Oak_Tiered_Evergreen.glb', (gltf) => {
-            loadedModels.evergreenTrunk = gltf.scene.clone();
+            loadedMeshes.evergreenTrunk = extractFirstMesh(gltf);
             onLoaded();
         });
 
         // Carregar copa do carvalho
         loader.load('../elements/Green_Cauliflower.glb', (gltf) => {
-            loadedModels.oakCrown = gltf.scene.clone();
+            loadedMeshes.oakCrown = extractFirstMesh(gltf);
             onLoaded();
         });
 
         // Carregar tronco do carvalho
         loader.load('../elements/Oak_Green_Cauliflower.glb', (gltf) => {
-            loadedModels.oakTrunk = gltf.scene.clone();
+            loadedMeshes.oakTrunk = extractFirstMesh(gltf);
             onLoaded();
         });
     });
 }
 
 /**
- * Cria uma árvore (grupo com tronco + copa).
- * @param {string} type - Tipo de árvore: 'evergreen' ou 'oak'
- * @param {THREE.Vector3} position - Posição do tronco
- * @returns {THREE.Group} Grupo contendo tronco + copa com metadados para animação
+ * Extrai o primeiro mesh de um modelo GLTF com geometria e material.
+ * @param {Object} gltf - Modelo GLTF carregado
+ * @returns {Object} { geometry, material }
  */
-function createTree(type, position) {
-    const treeGroup = new THREE.Group();
-    treeGroup.name = `tree_${type}`;
-    treeGroup.position.copy(position);
+function extractFirstMesh(gltf) {
+    let geometry = null;
+    let material = null;
 
-    const config = SETTINGS.scale[type];
+    gltf.scene.traverse((child) => {
+        if (child.isMesh && !geometry) {
+            geometry = child.geometry.clone();
+            material = child.material.clone();
+        }
+    });
 
-    // ── Tronco ──
-    let trunk = null;
-    if (type === 'evergreen') {
-        trunk = loadedModels.evergreenTrunk.clone();
-    } else if (type === 'oak') {
-        trunk = loadedModels.oakTrunk.clone();
-    }
-    
-    if (trunk) {
-        trunk.scale.setScalar(config.trunk);
-        trunk.castShadow = true;
-        trunk.receiveShadow = true;
-        trunk.traverse(child => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-            }
-        });
-        treeGroup.add(trunk);
-    }
+    return { geometry, material };
+}
 
-    // ── Copa ──
-    let crown = null;
-    if (type === 'evergreen') {
-        crown = loadedModels.evergreenCrown.clone();
-    } else if (type === 'oak') {
-        crown = loadedModels.oakCrown.clone();
-    }
-    
-    if (crown) {
-        crown.scale.setScalar(config.crown);
-        crown.position.y = config.crownOffsetY; // Offset vertical
-        crown.castShadow = true;
-        crown.receiveShadow = true;
-        crown.traverse(child => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-            }
-        });
-        treeGroup.add(crown);
-    }
-
-    // ── Metadados para animação de vento ──
-    // Cada copa tem offset de fase aleatório para não sincronizar
-    treeGroup.userData = {
-        crownObject: crown,
-        type: type,
-        windPhaseOffset: Math.random() * Math.PI * 2, // Offset de fase [0, 2π]
-        baseRotation: new THREE.Euler(0, 0, 0), // Referência de rotação inicial
-    };
-
-    return treeGroup;
+/**
+ * Cria um InstancedMesh para múltiplas instâncias do mesmo modelo.
+ * @param {Object} meshData - { geometry, material }
+ * @param {number} count - Número de instâncias
+ * @returns {THREE.InstancedMesh}
+ */
+function createInstancedMesh(meshData, count) {
+    const { geometry, material } = meshData;
+    const instancedMesh = new THREE.InstancedMesh(geometry, material, count);
+    instancedMesh.castShadow = true;
+    instancedMesh.receiveShadow = true;
+    return instancedMesh;
 }
 
 /**
@@ -188,51 +160,120 @@ function getRandomSpawnPosition(existingPositions) {
         }
     }
 
-    return null; // Não conseguiu encontrar posição válida
+    return null;
 }
 
 // ─── Funções Públicas ─────────────────────────────────────────────────────
 
 /**
- * Popula a cena com uma floresta de árvores (pinheiros + carvalhos).
- * Deve ser chamado depois de modelLoaded estar resolvido.
- * @param {THREE.Scene} scene - Cena Three.js onde adicionar as árvores
+ * Popula a cena com uma floresta usando InstancedMesh (otimizado para performance).
+ * @param {THREE.Scene} scene - Cena Three.js
  */
 async function spawnForest(scene) {
     // Awaitar carregamento dos modelos
     await loadAllModels();
 
-    const { evergreenCount, oakCount } = SETTINGS.spawn;
-    const usedPositions = []; // Rastrear posições para evitar sobreposição
+    const { maxEvergreens, maxOaks } = SETTINGS.spawn;
+    const usedPositions = [];
+
+    // ── Criar InstancedMeshes ──
+    instancedMeshes.trunkEvergreen = createInstancedMesh(loadedMeshes.evergreenTrunk, maxEvergreens);
+    instancedMeshes.crownEvergreen = createInstancedMesh(loadedMeshes.evergreenCrown, maxEvergreens);
+    instancedMeshes.trunkOak = createInstancedMesh(loadedMeshes.oakTrunk, maxOaks);
+    instancedMeshes.crownOak = createInstancedMesh(loadedMeshes.oakCrown, maxOaks);
 
     // ── Spawnar pinheiros ──
-    for (let i = 0; i < evergreenCount; i++) {
+    let evergreenIndex = 0;
+    for (let i = 0; i < maxEvergreens; i++) {
         const pos = getRandomSpawnPosition(usedPositions);
         if (pos) {
-            const tree = createTree('evergreen', pos);
-            scene.add(tree);
-            treeInstances.push(tree);
+            const config = SETTINGS.scale.evergreen;
+            
+            // Matriz para tronco
+            const trunkMatrix = new THREE.Matrix4()
+                .compose(pos, new THREE.Quaternion(), new THREE.Vector3(config.trunk, config.trunk, config.trunk));
+            instancedMeshes.trunkEvergreen.setMatrixAt(evergreenIndex, trunkMatrix);
+
+            // Matriz para copa (com offset Y)
+            const crownPos = pos.clone();
+            crownPos.y += config.crownOffsetY;
+            const crownMatrix = new THREE.Matrix4()
+                .compose(crownPos, new THREE.Quaternion(), new THREE.Vector3(config.crown, config.crown, config.crown));
+            instancedMeshes.crownEvergreen.setMatrixAt(evergreenIndex, crownMatrix);
+
+            // Guardar metadados para animação
+            treeInstances.push({
+                type: 'evergreen',
+                index: evergreenIndex,
+                position: pos,
+                windPhaseOffset: Math.random() * Math.PI * 2,
+                basePosition: pos.clone(),
+                crownOffsetY: config.crownOffsetY,
+            });
+
             usedPositions.push(pos.clone());
+            evergreenIndex++;
         }
     }
+    instancedMeshes.trunkEvergreen.count = evergreenIndex;
+    instancedMeshes.crownEvergreen.count = evergreenIndex;
+    instancedMeshes.trunkEvergreen.instanceMatrix.needsUpdate = true;
+    instancedMeshes.crownEvergreen.instanceMatrix.needsUpdate = true;
 
     // ── Spawnar carvalhos ──
-    for (let i = 0; i < oakCount; i++) {
+    let oakIndex = 0;
+    for (let i = 0; i < maxOaks; i++) {
         const pos = getRandomSpawnPosition(usedPositions);
         if (pos) {
-            const tree = createTree('oak', pos);
-            scene.add(tree);
-            treeInstances.push(tree);
+            const config = SETTINGS.scale.oak;
+            
+            // Matriz para tronco
+            const trunkMatrix = new THREE.Matrix4()
+                .compose(pos, new THREE.Quaternion(), new THREE.Vector3(config.trunk, config.trunk, config.trunk));
+            instancedMeshes.trunkOak.setMatrixAt(oakIndex, trunkMatrix);
+
+            // Matriz para copa (com offset Y)
+            const crownPos = pos.clone();
+            crownPos.y += config.crownOffsetY;
+            const crownMatrix = new THREE.Matrix4()
+                .compose(crownPos, new THREE.Quaternion(), new THREE.Vector3(config.crown, config.crown, config.crown));
+            instancedMeshes.crownOak.setMatrixAt(oakIndex, crownMatrix);
+
+            // Guardar metadados para animação
+            treeInstances.push({
+                type: 'oak',
+                index: oakIndex,
+                position: pos,
+                windPhaseOffset: Math.random() * Math.PI * 2,
+                basePosition: pos.clone(),
+                crownOffsetY: config.crownOffsetY,
+            });
+
             usedPositions.push(pos.clone());
+            oakIndex++;
         }
     }
+    instancedMeshes.trunkOak.count = oakIndex;
+    instancedMeshes.crownOak.count = oakIndex;
+    instancedMeshes.trunkOak.instanceMatrix.needsUpdate = true;
+    instancedMeshes.crownOak.instanceMatrix.needsUpdate = true;
 
-    console.log(`Floresta criada: ${treeInstances.length} árvores`);
+    // ── Adicionar à cena ──
+    if (evergreenIndex > 0) {
+        scene.add(instancedMeshes.trunkEvergreen);
+        scene.add(instancedMeshes.crownEvergreen);
+    }
+    if (oakIndex > 0) {
+        scene.add(instancedMeshes.trunkOak);
+        scene.add(instancedMeshes.crownOak);
+    }
+
+    console.log(`Floresta criada: ${evergreenIndex + oakIndex} árvores (InstancedMesh otimizado)`);
 }
 
 /**
  * Atualiza a animação de vento de todas as copas.
- * Deve ser chamado no loop de animação com delta time.
+ * Usa setMatrixAt para atualizar cada instância com rotação procedural.
  * @param {number} delta - Tempo desde o último frame (segundos)
  */
 function update(delta) {
@@ -240,19 +281,40 @@ function update(delta) {
     const { speed, intensityX, intensityZ } = SETTINGS.wind;
 
     for (const tree of treeInstances) {
-        const crown = tree.userData.crownObject;
-        if (!crown) continue;
-
         // Calcular tempo com offset de fase aleatório
-        const time = now * speed + tree.userData.windPhaseOffset;
+        const time = now * speed + tree.windPhaseOffset;
 
-        // Aplicar oscilação de vento (senos e cossenos em fase diferente)
+        // Aplicar oscilação de vento
         const rotX = Math.sin(time) * intensityX;
-        const rotZ = Math.cos(time * 0.8) * intensityZ; // 0.8 para desincronizar um pouco
+        const rotZ = Math.cos(time * 0.8) * intensityZ;
 
-        // Aplicar rotação relative (mantendo a rotação base)
-        crown.rotation.x = rotX;
-        crown.rotation.z = rotZ;
+        // Criar quaternião com as rotações
+        const qX = new THREE.Quaternion();
+        qX.setFromAxisAngle(new THREE.Vector3(1, 0, 0), rotX);
+        const qZ = new THREE.Quaternion();
+        qZ.setFromAxisAngle(new THREE.Vector3(0, 0, 1), rotZ);
+        const quaternion = qX.multiply(qZ);
+
+        // Posição da copa (com offset Y do tronco)
+        const crownPos = tree.basePosition.clone();
+        crownPos.y += tree.crownOffsetY;
+
+        // Criar matriz com transformação animada
+        const matrix = new THREE.Matrix4()
+            .compose(crownPos, quaternion, new THREE.Vector3(1, 1, 1));
+
+        // Aplicar escala
+        const scale = SETTINGS.scale[tree.type].crown;
+        matrix.scale(new THREE.Vector3(scale, scale, scale));
+
+        // Atualizar InstancedMesh
+        if (tree.type === 'evergreen') {
+            instancedMeshes.crownEvergreen.setMatrixAt(tree.index, matrix);
+            instancedMeshes.crownEvergreen.instanceMatrix.needsUpdate = true;
+        } else if (tree.type === 'oak') {
+            instancedMeshes.crownOak.setMatrixAt(tree.index, matrix);
+            instancedMeshes.crownOak.instanceMatrix.needsUpdate = true;
+        }
     }
 }
 
