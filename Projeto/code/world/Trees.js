@@ -38,7 +38,7 @@ const SETTINGS = {
 
     // LOD e otimizações de performance com dois níveis
     lod: {
-        animateDistance: 8,   // Árvores até esta distância têm animação de vento
+        animateDistance: 5,   // Árvores até esta distância têm animação de vento
         staticDistance: 25,   // Árvores além disto ficam completamente estáticas
     },
 };
@@ -383,6 +383,14 @@ async function spawnForest(scene, raccoon, options = {}) {
     console.log(`Floresta criada: ${evergreenIndex + oakIndex} árvores (${evergreenIndex} pinheiros, ${oakIndex} carvalhos)`);
 }
 
+// ─── Objectos Pré-alocados para Otimização (reutilizados em update) ──────────
+const _qX = new THREE.Quaternion();      // Quaternião para rotação em X
+const _qZ = new THREE.Quaternion();      // Quaternião para rotação em Z
+const _matrix = new THREE.Matrix4();     // Matriz de transformação
+const _pos = new THREE.Vector3();        // Posição temporária
+const _scale = new THREE.Vector3();      // Escala temporária
+const _axis = new THREE.Vector3();       // Eixo temporário para rotação
+
 /**
  * Atualiza a animação de vento de todas as copas.
  * Usa setMatrixAt para atualizar cada instância com rotação procedural.
@@ -399,6 +407,10 @@ function update(delta, playerPos) {
     if (playerPos) {
         raccoonPosition.copy(playerPos);
     }
+
+    // Flags para marcar needsUpdate apenas uma vez
+    let evergreenCrownUpdated = false;
+    let oakCrownUpdated = false;
 
     for (const tree of treeInstances) {
         // ── LOD: Verificar distância ──
@@ -422,37 +434,39 @@ function update(delta, playerPos) {
         const rotX = Math.sin(time) * intensityX;
         const rotZ = Math.cos(time * 0.8) * intensityZ;
 
-        // Criar quaternião com as rotações
-        const qX = new THREE.Quaternion();
-        qX.setFromAxisAngle(new THREE.Vector3(1, 0, 0), rotX);
-        const qZ = new THREE.Quaternion();
-        qZ.setFromAxisAngle(new THREE.Vector3(0, 0, 1), rotZ);
-        const quaternion = qX.multiply(qZ);
+        // Reutilizar quaterniões pré-alocados
+        _qX.setFromAxisAngle(_axis.set(1, 0, 0), rotX);
+        _qZ.setFromAxisAngle(_axis.set(0, 0, 1), rotZ);
+        const quaternion = _qX.multiply(_qZ);
 
         // Posicionar a copa com yOffset do tronco + offset configurável + yOffset da copa
-        const crownPos = tree.basePosition.clone();
+        _pos.copy(tree.basePosition);
         if (tree.type === 'evergreen') {
-            crownPos.y = tree.trunkY + (tree.crownOffsetY * tree.randomTrunkScale) + (loadedMeshes.evergreenCrown.yOffset * tree.randomScale);
+            _pos.y = tree.trunkY + (tree.crownOffsetY * tree.randomTrunkScale) + (loadedMeshes.evergreenCrown.yOffset * tree.randomScale);
         } else if (tree.type === 'oak') {
-            crownPos.y = tree.trunkY + (tree.crownOffsetY * tree.randomTrunkScale) + (loadedMeshes.oakCrown.yOffset * tree.randomScale);
+            _pos.y = tree.trunkY + (tree.crownOffsetY * tree.randomTrunkScale) + (loadedMeshes.oakCrown.yOffset * tree.randomScale);
         }
 
-        // Criar matriz com transformação animada
-        const matrix = new THREE.Matrix4()
-            .compose(crownPos, quaternion, new THREE.Vector3(1, 1, 1));
-
-        // Aplicar escala real (armazenada nos metadados)
-        const scale = tree.randomScale;
-        matrix.scale(new THREE.Vector3(scale, scale, scale));
+        // Reutilizar matriz pré-alocada com transformação animada
+        _scale.set(tree.randomScale, tree.randomScale, tree.randomScale);
+        _matrix.compose(_pos, quaternion, _scale);
 
         // Atualizar InstancedMesh
         if (tree.type === 'evergreen') {
-            instancedMeshes.crownEvergreen.setMatrixAt(tree.index, matrix);
-            instancedMeshes.crownEvergreen.instanceMatrix.needsUpdate = true;
+            instancedMeshes.crownEvergreen.setMatrixAt(tree.index, _matrix);
+            evergreenCrownUpdated = true;
         } else if (tree.type === 'oak') {
-            instancedMeshes.crownOak.setMatrixAt(tree.index, matrix);
-            instancedMeshes.crownOak.instanceMatrix.needsUpdate = true;
+            instancedMeshes.crownOak.setMatrixAt(tree.index, _matrix);
+            oakCrownUpdated = true;
         }
+    }
+
+    // Marcar needsUpdate apenas uma vez por tipo de árvore (fora do loop)
+    if (evergreenCrownUpdated) {
+        instancedMeshes.crownEvergreen.instanceMatrix.needsUpdate = true;
+    }
+    if (oakCrownUpdated) {
+        instancedMeshes.crownOak.instanceMatrix.needsUpdate = true;
     }
 }
 
