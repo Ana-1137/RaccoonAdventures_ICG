@@ -13,8 +13,8 @@ const SETTINGS = {
         rotate: 3.5,  // rad/s de rotação (ajustado para melhor controlo)
     },
     physics: {
-        gravity: 30,      // Gravidade equilibrada
-        jumpPower: 5.5,   // Salto curto
+        gravity: 6.375,      // Gravidade ajustada para melhor sincronização com animação
+        jumpPower: 2.55,   // Ajustado proporcionalmente para manter altura máxima (h ≈ 0.51)
         rayHeight: 0.6,   // raio para baixo a partir dos pés
         ceilingCheckHeight: 0.5, // teto
         maxStepHeight: 0.2, // degraus
@@ -34,6 +34,7 @@ const SETTINGS = {
         runForward: 16 * 0.1,         // velocidade horizontal no salto a correr
         walkStartFrame: 15,            // frame inicial do sub-clip do jump a andar
         walkEndTrimFrames: 15,          // frames a cortar no final (termina antes da pose estática)
+        launchDelay: 0.15,             // Delay antes da aplicação do impulso (sincronização com prep frames)
     },
     terrified: {
         loopStartFrame: 30,             // Início
@@ -138,6 +139,8 @@ class Raccoon {
 
         // ── Inércia de Salto ──
         this.jumpForwardSpeed = 0;
+        this.jumpLaunchPending = false; // Aguardando delay antes do liftoff
+        this.jumpLaunchTimer = 0;      // Contador do delay do salto
 
         /** Promessa resolvida quando o modelo e todas as animações estiverem carregados. */
         this.modelLoaded = new Promise(resolve => this._loadModel(resolve));
@@ -342,6 +345,17 @@ class Raccoon {
 
         if (isMoving || input.jump || isTerrified) this.idleTimer = 0;
 
+        // ── Processamento do Delay de Liftoff do Salto ──────────────────────────────────────────
+        if (this.jumpLaunchPending) {
+            this.jumpLaunchTimer -= delta;
+            if (this.jumpLaunchTimer <= 0) {
+                // Aplicar impulso após delay de preparação
+                this.verticalVelocity = SETTINGS.physics.jumpPower;
+                this.jumpLaunchPending = false;
+                this.isGrounded = false; // Confirma a descolagem
+            }
+        }
+
         // --- SISTEMA DE FÍSICA E CHÃO (Fase 12) ---
         this._handleGravityAndGround(delta);
 
@@ -357,9 +371,11 @@ class Raccoon {
 
         // Durante o salto, preservamos a inércia horizontal mas permitimos rotação limitada
         if (this.currentState === STATES.JUMP) {
-            if (this.isGrounded) {
+            // CORREÇÃO: Só aterra se já descolou (!jumpLaunchPending) e está a cair (<= 0)
+            if (this.isGrounded && !this.jumpLaunchPending && this.verticalVelocity <= 0) {
                 // Aterrou! Voltamos diretamente para IDLE sem estado intermédio
                 this.currentState = STATES.IDLE;
+                this.fadeToAction('idle', 0.15);
             } else {
                 // ── Wall check durante o salto ──────────────────────────────────
                 let isWallInFront = false;
@@ -468,8 +484,9 @@ class Raccoon {
 
             this.fadeToAction(jumpAnim, SETTINGS.blend.toJump);
 
-            // Impulso vertical (Fase 12)
-            this.verticalVelocity = SETTINGS.physics.jumpPower;
+            // ── Delay no impulso para sincronizar com frames de preparação da animação ──
+            this.jumpLaunchPending = true;
+            this.jumpLaunchTimer = SETTINGS.jump.launchDelay;
             this.isGrounded = false;
         }
 
@@ -692,6 +709,13 @@ class Raccoon {
      * Faz o guaxinim subir rampas e cair de plataformas.
      */
     _handleGravityAndGround(delta) {
+        // CORREÇÃO: Pausar a física Y enquanto o guaxinim se agacha para saltar
+        if (this.jumpLaunchPending) {
+            this.isGrounded = true;
+            this.verticalVelocity = 0;
+            return;
+        }
+
         // Obter candidatos a chão/teto
         const collidables = this.scene.children.filter(obj =>
             obj !== this.model && obj.type !== 'Light' && obj.type !== 'AmbientLight'
