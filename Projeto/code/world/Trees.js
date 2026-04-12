@@ -3,17 +3,17 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ─── Configuração Central ─────────────────────────────────────────────────────
 const SETTINGS = {
-    // Escala de grupo — tronco e copa escalam juntos mantendo a proporção
+    // Escalas dos modelos com ranges aleatórios (cada árvore tem tronco e copa separados)
     scale: {
-        // Pinheiro (Evergreen)
         evergreen: {
-            treeScale: { min: 0.4, max: 1.2 },    // Escala do grupo inteiro (tronco + copa)
-            crownOffsetY: { min: 0.3, max: 0.8 }, // Offset da copa em espaço local (antes da escala)
+            trunk: { min: 0.3, max: 0.5 },
+            crown: { min: 0.3, max: 0.5 },
+            crownOffsetY: { min: 0.3, max: 0.8 },
         },
-        // Carvalho (Oak/Log)
         oak: {
-            treeScale: { min: 0.4, max: 1.0 },    // Escala do grupo inteiro (tronco + copa)
-            crownOffsetY: { min: 0.4, max: 0.6 }, // Offset da copa em espaço local (antes da escala)
+            trunk: { min: 0.3, max: 0.45 },
+            crown: { min: 0.3, max: 0.45 },
+            crownOffsetY: { min: 0.3, max: 0.5 },
         },
     },
     
@@ -26,13 +26,13 @@ const SETTINGS = {
     
     // Spawn da floresta
     spawn: {
-        totalTrees: 60,            // Número total de árvores a spawnar
+        totalTrees: 20,            // Número total de árvores a spawnar
         evergreenPercent: 0.6,     // Percentagem de pinheiros (0-1)
         oakPercent: 0.4,           // Percentagem de carvalhos (0-1)
-        areaRadius: 40,            // Raio da área de spawn (em unidades)
-        minDistanceApart: 2.5,     // Distância mínima entre árvores
-        groundY: 0,                // Altura Y onde as árvores spawnam (0 = chão)
-        clearZoneRadius: 5,        // Raio da zona central circular reservada (fogueira, tenda, etc)
+        areaRadius: 30,            // Raio da área de spawn (em unidades)
+        minDistanceApart: 3.0,     // Distância mínima entre árvores
+        groundY: 0.5,              // Altura Y onde as árvores spawnam
+        clearZoneRadius: 8,        // Raio da zona central circular reservada (fogueira, tenda, etc)
         // Zonas de exclusão adicionais (circular e rectangular)
         exclusionZones: [
             // Exemplo: Zona da queda de água (circular)
@@ -120,22 +120,29 @@ function loadAllModels() {
 }
 
 /**
- * Extrai o primeiro mesh de um modelo GLTF com geometria e material.
+ * Extrai o primeiro mesh de um modelo GLTF com geometria, material e yOffset.
+ * O yOffset é calculado a partir da bounding box (quanto subir para a base ficar em Y=0).
  * @param {Object} gltf - Modelo GLTF carregado
- * @returns {Object} { geometry, material }
+ * @returns {Object} { geometry, material, yOffset }
  */
 function extractFirstMesh(gltf) {
     let geometry = null;
     let material = null;
+    let yOffset = 0;
 
     gltf.scene.traverse((child) => {
         if (child.isMesh && !geometry) {
             geometry = child.geometry.clone();
             material = child.material.clone();
+            
+            // Calcular yOffset usando Box3 com escala 1.0
+            const tempMesh = new THREE.Mesh(geometry, material);
+            const box = new THREE.Box3().setFromObject(tempMesh);
+            yOffset = -box.min.y; // quanto subir para a base ficar em Y=0
         }
     });
 
-    return { geometry, material };
+    return { geometry, material, yOffset };
 }
 
 /**
@@ -269,29 +276,30 @@ async function spawnForest(scene, raccoon, options = {}) {
     for (let i = 0; i < maxEvergreens; i++) {
         const pos = getRandomSpawnPosition(usedPositions);
         if (pos) {
-            // Gerar escala única para o grupo inteiro (tronco + copa)
-            const randomScale = randomBetween(SETTINGS.scale.evergreen.treeScale.min, SETTINGS.scale.evergreen.treeScale.max);
+            // Gerar escalas aleatórias para esta árvore
+            const randomTrunkScale = randomBetween(SETTINGS.scale.evergreen.trunk.min, SETTINGS.scale.evergreen.trunk.max);
+            const randomCrownScale = randomBetween(SETTINGS.scale.evergreen.crown.min, SETTINGS.scale.evergreen.crown.max);
             const randomCrownOffsetY = randomBetween(SETTINGS.scale.evergreen.crownOffsetY.min, SETTINGS.scale.evergreen.crownOffsetY.max);
             
-            // Tronco: posição local (0,0,0), mundo em (worldX, groundY, worldZ), escala randomScale
-            const trunkMatrix = new THREE.Matrix4();
-            trunkMatrix.compose(
-                new THREE.Vector3(pos.x, SETTINGS.spawn.groundY, pos.z),
-                new THREE.Quaternion(),
-                new THREE.Vector3(randomScale, randomScale, randomScale)
-            );
+            // Calcular posição Y do tronco com yOffset escalado
+            const trunkY = SETTINGS.spawn.groundY + (loadedMeshes.evergreenTrunk.yOffset * randomTrunkScale);
+            const trunkPos = pos.clone();
+            trunkPos.y = trunkY;
+            
+            // Matriz para tronco
+            const trunkMatrix = new THREE.Matrix4()
+                .compose(trunkPos, new THREE.Quaternion(), new THREE.Vector3(randomTrunkScale, randomTrunkScale, randomTrunkScale));
             instancedMeshes.trunkEvergreen.setMatrixAt(evergreenIndex, trunkMatrix);
 
-            // Copa: posição local (0, crownOffsetY, 0) escalada + groundY
-            const crownMatrix = new THREE.Matrix4();
-            crownMatrix.compose(
-                new THREE.Vector3(pos.x, SETTINGS.spawn.groundY + randomCrownOffsetY * randomScale, pos.z),
-                new THREE.Quaternion(),
-                new THREE.Vector3(randomScale, randomScale, randomScale)
-            );
+            // Calcular posição Y da copa com yOffset do tronco + offset configurável + yOffset da copa
+            const crownY = trunkY + (randomCrownOffsetY * randomTrunkScale) + (loadedMeshes.evergreenCrown.yOffset * randomCrownScale);
+            const crownPos = pos.clone();
+            crownPos.y = crownY;
+            const crownMatrix = new THREE.Matrix4()
+                .compose(crownPos, new THREE.Quaternion(), new THREE.Vector3(randomCrownScale, randomCrownScale, randomCrownScale));
             instancedMeshes.crownEvergreen.setMatrixAt(evergreenIndex, crownMatrix);
 
-            // Guardar metadados para animação
+            // Guardar metadados para animação (incluindo o crownOffsetY real gerado)
             treeInstances.push({
                 type: 'evergreen',
                 index: evergreenIndex,
@@ -299,7 +307,9 @@ async function spawnForest(scene, raccoon, options = {}) {
                 windPhaseOffset: Math.random() * Math.PI * 2,
                 basePosition: pos.clone(),
                 crownOffsetY: randomCrownOffsetY,
-                randomScale: randomScale,
+                randomScale: randomCrownScale,
+                randomTrunkScale: randomTrunkScale,
+                trunkY: trunkY,
             });
 
             usedPositions.push(pos.clone());
@@ -316,29 +326,30 @@ async function spawnForest(scene, raccoon, options = {}) {
     for (let i = 0; i < maxOaks; i++) {
         const pos = getRandomSpawnPosition(usedPositions);
         if (pos) {
-            // Gerar escala única para o grupo inteiro (tronco + copa)
-            const randomScale = randomBetween(SETTINGS.scale.oak.treeScale.min, SETTINGS.scale.oak.treeScale.max);
+            // Gerar escalas aleatórias para esta árvore
+            const randomTrunkScale = randomBetween(SETTINGS.scale.oak.trunk.min, SETTINGS.scale.oak.trunk.max);
+            const randomCrownScale = randomBetween(SETTINGS.scale.oak.crown.min, SETTINGS.scale.oak.crown.max);
             const randomCrownOffsetY = randomBetween(SETTINGS.scale.oak.crownOffsetY.min, SETTINGS.scale.oak.crownOffsetY.max);
             
-            // Tronco: posição local (0,0,0), mundo em (worldX, groundY, worldZ), escala randomScale
-            const trunkMatrix = new THREE.Matrix4();
-            trunkMatrix.compose(
-                new THREE.Vector3(pos.x, SETTINGS.spawn.groundY, pos.z),
-                new THREE.Quaternion(),
-                new THREE.Vector3(randomScale, randomScale, randomScale)
-            );
+            // Calcular posição Y do tronco com yOffset escalado
+            const trunkY = SETTINGS.spawn.groundY + (loadedMeshes.oakTrunk.yOffset * randomTrunkScale);
+            const trunkPos = pos.clone();
+            trunkPos.y = trunkY;
+            
+            // Matriz para tronco
+            const trunkMatrix = new THREE.Matrix4()
+                .compose(trunkPos, new THREE.Quaternion(), new THREE.Vector3(randomTrunkScale, randomTrunkScale, randomTrunkScale));
             instancedMeshes.trunkOak.setMatrixAt(oakIndex, trunkMatrix);
 
-            // Copa: posição local (0, crownOffsetY, 0) escalada + groundY
-            const crownMatrix = new THREE.Matrix4();
-            crownMatrix.compose(
-                new THREE.Vector3(pos.x, SETTINGS.spawn.groundY + randomCrownOffsetY * randomScale, pos.z),
-                new THREE.Quaternion(),
-                new THREE.Vector3(randomScale, randomScale, randomScale)
-            );
+            // Calcular posição Y da copa com yOffset do tronco + offset configurável + yOffset da copa
+            const crownY = trunkY + (randomCrownOffsetY * randomTrunkScale) + (loadedMeshes.oakCrown.yOffset * randomCrownScale);
+            const crownPos = pos.clone();
+            crownPos.y = crownY;
+            const crownMatrix = new THREE.Matrix4()
+                .compose(crownPos, new THREE.Quaternion(), new THREE.Vector3(randomCrownScale, randomCrownScale, randomCrownScale));
             instancedMeshes.crownOak.setMatrixAt(oakIndex, crownMatrix);
 
-            // Guardar metadados para animação
+            // Guardar metadados para animação (incluindo o crownOffsetY real gerado)
             treeInstances.push({
                 type: 'oak',
                 index: oakIndex,
@@ -346,7 +357,9 @@ async function spawnForest(scene, raccoon, options = {}) {
                 windPhaseOffset: Math.random() * Math.PI * 2,
                 basePosition: pos.clone(),
                 crownOffsetY: randomCrownOffsetY,
-                randomScale: randomScale,
+                randomScale: randomCrownScale,
+                randomTrunkScale: randomTrunkScale,
+                trunkY: trunkY,
             });
 
             usedPositions.push(pos.clone());
@@ -422,20 +435,28 @@ function update(delta, playerPos) {
         qZ.setFromAxisAngle(new THREE.Vector3(0, 0, 1), rotZ);
         const quaternion = qX.multiply(qZ);
 
-        // Posição da copa: posição local (0, crownOffsetY, 0) escalada + groundY
-        const crownMatrix = new THREE.Matrix4();
-        crownMatrix.compose(
-            new THREE.Vector3(tree.basePosition.x, SETTINGS.spawn.groundY + tree.crownOffsetY * tree.randomScale, tree.basePosition.z),
-            quaternion,
-            new THREE.Vector3(tree.randomScale, tree.randomScale, tree.randomScale)
-        );
+        // Posicionar a copa com yOffset do tronco + offset configurável + yOffset da copa
+        const crownPos = tree.basePosition.clone();
+        if (tree.type === 'evergreen') {
+            crownPos.y = tree.trunkY + (tree.crownOffsetY * tree.randomTrunkScale) + (loadedMeshes.evergreenCrown.yOffset * tree.randomScale);
+        } else if (tree.type === 'oak') {
+            crownPos.y = tree.trunkY + (tree.crownOffsetY * tree.randomTrunkScale) + (loadedMeshes.oakCrown.yOffset * tree.randomScale);
+        }
+
+        // Criar matriz com transformação animada
+        const matrix = new THREE.Matrix4()
+            .compose(crownPos, quaternion, new THREE.Vector3(1, 1, 1));
+
+        // Aplicar escala real (armazenada nos metadados)
+        const scale = tree.randomScale;
+        matrix.scale(new THREE.Vector3(scale, scale, scale));
 
         // Atualizar InstancedMesh
         if (tree.type === 'evergreen') {
-            instancedMeshes.crownEvergreen.setMatrixAt(tree.index, crownMatrix);
+            instancedMeshes.crownEvergreen.setMatrixAt(tree.index, matrix);
             instancedMeshes.crownEvergreen.instanceMatrix.needsUpdate = true;
         } else if (tree.type === 'oak') {
-            instancedMeshes.crownOak.setMatrixAt(tree.index, crownMatrix);
+            instancedMeshes.crownOak.setMatrixAt(tree.index, matrix);
             instancedMeshes.crownOak.instanceMatrix.needsUpdate = true;
         }
     }
