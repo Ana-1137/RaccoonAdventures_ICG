@@ -13,15 +13,15 @@ const SETTINGS = {
         rotate: 3.5,  // rad/s de rotação (ajustado para melhor controlo)
     },
     physics: {
-        gravity: 6.375,      // Gravidade ajustada para melhor sincronização com animação
-        jumpPower: 2.55,   // Ajustado proporcionalmente para manter altura máxima (h ≈ 0.51)
+        gravity: 1.3,      // Gravidade ajustada para melhor sincronização com animação
+        jumpPower: 0.8,   // Ajustado proporcionalmente para manter altura máxima (h ≈ 0.51)
         rayHeight: 0.6,   // raio para baixo a partir dos pés
         ceilingCheckHeight: 0.5, // teto
         maxStepHeight: 0.2, // degraus
         ledgeDepth: 1.5,  // profundidade
         ledgeOffset: 0.1, // Margem bem mais curta (Fase 12 Final)
         // ── Refinamento de Raycast (Fase 12 - Rampas) ──
-        maxLandingDistance: -1.5, // distância máxima de caída permitida em rampas (negativo = para baixo)
+        maxLandingDistance: -0.3, // distância máxima de caída permitida em rampas (negativo = para baixo)
         backfaceNormalThreshold: 0.1, // threshold da normal-Y para rejeitar backfaces (valores < isto = face de baixo)
         // ── Deteção de Paredes (Fase 12 - Colisões Horizontais) ──
         wallCheckDistance: 0.1, // distância do raycast horizontal para a frente
@@ -371,8 +371,8 @@ class Raccoon {
 
         // Durante o salto, preservamos a inércia horizontal mas permitimos rotação limitada
         if (this.currentState === STATES.JUMP) {
-            // CORREÇÃO: Só aterra se já descolou (!jumpLaunchPending) e está a cair (<= 0)
-            if (this.isGrounded && !this.jumpLaunchPending && this.verticalVelocity <= 0) {
+            // CORREÇÃO: Só aterra se já descolou (!jumpLaunchPending) e está no chão
+            if (this.isGrounded && !this.jumpLaunchPending) {
                 // Aterrou! Voltamos diretamente para IDLE sem estado intermédio
                 this.currentState = STATES.IDLE;
                 this.fadeToAction('idle', 0.15);
@@ -710,11 +710,7 @@ class Raccoon {
      */
     _handleGravityAndGround(delta) {
         // CORREÇÃO: Pausar a física Y enquanto o guaxinim se agacha para saltar
-        if (this.jumpLaunchPending) {
-            this.isGrounded = true;
-            this.verticalVelocity = 0;
-            return;
-        }
+        if (this.jumpLaunchPending) return;
 
         // Obter candidatos a chão/teto
         const collidables = this.scene.children.filter(obj =>
