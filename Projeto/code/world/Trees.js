@@ -278,6 +278,17 @@ async function spawnForest(scene, raccoon) {
     instancedMeshes.trunkOak.instanceMatrix.needsUpdate = true;
     instancedMeshes.crownOak.instanceMatrix.needsUpdate = true;
 
+    // ── Configuração de Raycast para Colisão ──
+    // InstancedMeshes não suportam raycast por defeito — adicionar suporte manualmente
+    if (evergreenIndex > 0) {
+        instancedMeshes.trunkEvergreen.raycast = THREE.InstancedMesh.prototype.raycast.bind(instancedMeshes.trunkEvergreen);
+        instancedMeshes.trunkEvergreen.layers.set(0); // Garantir que está na layer 0 (padrão)
+    }
+    if (oakIndex > 0) {
+        instancedMeshes.trunkOak.raycast = THREE.InstancedMesh.prototype.raycast.bind(instancedMeshes.trunkOak);
+        instancedMeshes.trunkOak.layers.set(0); // Garantir que está na layer 0 (padrão)
+    }
+
     // ── Adicionar à cena ──
     if (evergreenIndex > 0) {
         scene.add(instancedMeshes.trunkEvergreen);
