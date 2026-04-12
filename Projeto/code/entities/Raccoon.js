@@ -391,6 +391,9 @@ class Raccoon {
                 // Aplicar movimento de inércia do salto (apenas se não há parede)
                 if (isWallInFront) {
                     this.jumpForwardSpeed = 0; // Parar inércia horizontal ao atingir parede
+                    this.verticalVelocity = 0; // Parar velocidade vertical
+                    this.currentState = STATES.IDLE; // Forçar saída imediata do estado JUMP
+                    this.fadeToAction('idle', 0.2); // Transição para animação idle
                 } else {
                     this.model.translateZ(this.jumpForwardSpeed * delta);
                 }
