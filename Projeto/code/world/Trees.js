@@ -26,13 +26,13 @@ const SETTINGS = {
     
     // Spawn da floresta
     spawn: {
-        totalTrees: 20,            // Número total de árvores a spawnar
-        evergreenPercent: 0.6,     // Percentagem de pinheiros (0-1)
-        oakPercent: 0.4,           // Percentagem de carvalhos (0-1)
+        totalTrees: 100,            // Número total de árvores a spawnar
+        evergreenPercent: 0.5,     // Percentagem de pinheiros (0-1)
+        oakPercent: 0.5,           // Percentagem de carvalhos (0-1)
         areaRadius: 30,            // Raio da área de spawn (em unidades)
-        minDistanceApart: 3.0,     // Distância mínima entre árvores
-        groundY: 0.5,              // Altura Y onde as árvores spawnam
-        clearZoneRadius: 8,        // Raio da zona central circular reservada (fogueira, tenda, etc)
+        minDistanceApart: 2.0,     // Distância mínima entre árvores
+        groundY: 0.0,              // Altura Y onde as árvores spawnam
+        clearZoneRadius: 3,        // Raio da zona central circular reservada (fogueira, tenda, etc)
         // Zonas de exclusão adicionais (circular e rectangular)
         exclusionZones: [
             // Exemplo: Zona da queda de água (circular)
