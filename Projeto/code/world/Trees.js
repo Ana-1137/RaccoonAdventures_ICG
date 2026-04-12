@@ -9,13 +9,13 @@ const SETTINGS = {
         evergreen: {
             trunk: 0.5,   // Escala do tronco
             crown: 0.5,   // Escala da copa
-            crownOffsetY: 0.45, // Altura da copa sobre o tronco
+            crownOffsetY: 0.7, // Altura da copa sobre o tronco
         },
         // Carvalho (Oak)
         oak: {
             trunk: 0.5,
             crown: 0.5,
-            crownOffsetY: 0.4,
+            crownOffsetY: 0.65,
         },
     },
     
@@ -83,7 +83,7 @@ function loadAllModels() {
         });
 
         // Carregar tronco do pinheiro
-        loader.load('../elements/Oak_Tiered_Evergreen.glb', (gltf) => {
+        loader.load('../elements/Log_Tiered_Evergreen.glb', (gltf) => {
             loadedMeshes.evergreenTrunk = extractFirstMesh(gltf);
             onLoaded();
         });
@@ -95,7 +95,7 @@ function loadAllModels() {
         });
 
         // Carregar tronco do carvalho
-        loader.load('../elements/Oak_Green_Cauliflower.glb', (gltf) => {
+        loader.load('../elements/Log_Green_Cauliflower.glb', (gltf) => {
             loadedMeshes.oakTrunk = extractFirstMesh(gltf);
             onLoaded();
         });
