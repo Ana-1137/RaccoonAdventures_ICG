@@ -122,6 +122,7 @@ class Raccoon {
         this.idleTimer = 0;      // segundos sem movimento
         this.wasJumping = false;  // evita disparar salto em todos os frames
         this.previousLeanSide = 'NONE'; // evita re-disparar a animação de curva
+        this.stuckTimer = 0;     // deteção de estado preso em transição
 
         // ── Inclinação Procedural (Spine Lean) ──
         this.leanAmount = 0; // valor atual interpolado
@@ -303,6 +304,27 @@ class Raccoon {
             console.warn(`Estado inválido detetado: ${this.currentState}, resetando para IDLE`);
             this.currentState = STATES.IDLE;
             this.fadeToAction('idle', 0.2);
+        }
+
+        // ── Deteção de Estado Preso em Transição ──────────────────────────────────────────────
+        // Se está em transição de corrida (esquerda/direita) e no chão, incrementar timer
+        const isInTransition = (this.currentState === STATES.RUN_LEFT_TRANSITION || 
+                                this.currentState === STATES.RUN_RIGHT_TRANSITION);
+        
+        if (isInTransition && this.isGrounded) {
+            this.stuckTimer += delta;
+            // Se estiver preso há mais de 2 segundos, fazer reset para IDLE
+            if (this.stuckTimer > 2.0) {
+                console.warn(`Estado preso detetado: ${this.currentState}, resetando para IDLE`);
+                this.currentState = STATES.IDLE;
+                this.fadeToAction('idle', 0.3);
+                this.stuckTimer = 0;
+            }
+        } else {
+            // Resetar timer quando muda de estado ou deixa de estar em transição
+            if (this.stuckTimer > 0) {
+                this.stuckTimer = 0;
+            }
         }
 
         // Derivar intenções a partir do input (abstração de teclas)
