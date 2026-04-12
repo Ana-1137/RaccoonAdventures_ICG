@@ -26,12 +26,12 @@ const SETTINGS = {
     
     // Spawn da floresta com sistema de dois anéis
     spawn: {
-        totalTrees: 80,            // Número total de árvores a spawnar
+        totalTrees: 180,            // Número total de árvores a spawnar
         evergreenPercent: 0.6,     // Percentagem de pinheiros (0-1)
         oakPercent: 0.4,           // Percentagem de carvalhos (0-1)
-        innerRadius: 6,            // Raio da zona reservada central (fogueira, tenda) — sem árvores
-        outerRadius: 18,           // Raio máximo de spawn — floresta densa entre inner e outer
-        minDistanceApart: 1.8,     // Distância mínima entre árvores
+        innerRadius: 3,            // Raio da zona reservada central (fogueira, tenda) — sem árvores
+        outerRadius: 8,           // Raio máximo de spawn — floresta densa entre inner e outer
+        minDistanceApart: 0.6,     // Distância mínima entre árvores
         groundY: 0.0,              // Altura Y onde as árvores spawnam
         exclusionZones: [],        // Zonas de exclusão adicionais (circular e rectangular)
     },
