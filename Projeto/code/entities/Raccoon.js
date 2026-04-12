@@ -13,7 +13,7 @@ const SETTINGS = {
         rotate: 3.5,  // rad/s de rotação (ajustado para melhor controlo)
     },
     physics: {
-        gravity: 1.3,      // Gravidade ajustada para melhor sincronização com animação
+        gravity: 2.3,      // Gravidade ajustada para melhor sincronização com animação
         jumpPower: 0.8,   // Ajustado proporcionalmente para manter altura máxima (h ≈ 0.51)
         rayHeight: 0.6,   // raio para baixo a partir dos pés
         ceilingCheckHeight: 0.5, // teto
@@ -21,7 +21,7 @@ const SETTINGS = {
         ledgeDepth: 1.5,  // profundidade
         ledgeOffset: 0.1, // Margem bem mais curta (Fase 12 Final)
         // ── Refinamento de Raycast (Fase 12 - Rampas) ──
-        maxLandingDistance: -0.3, // distância máxima de caída permitida em rampas (negativo = para baixo)
+        maxLandingDistance: -0.02, // distância máxima de caída permitida em rampas (negativo = para baixo)
         backfaceNormalThreshold: 0.1, // threshold da normal-Y para rejeitar backfaces (valores < isto = face de baixo)
         // ── Deteção de Paredes (Fase 12 - Colisões Horizontais) ──
         wallCheckDistance: 0.1, // distância do raycast horizontal para a frente
