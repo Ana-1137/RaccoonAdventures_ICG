@@ -3,19 +3,17 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ─── Configuração Central ─────────────────────────────────────────────────────
 const SETTINGS = {
-    // Escalas dos modelos (cada árvore tem tronco e copa separados)
+    // Escalas dos modelos com ranges aleatórios (cada árvore tem tronco e copa separados)
     scale: {
-        // Pinheiro (Evergreen)
         evergreen: {
-            trunk: 0.5,   // Escala do tronco
-            crown: 0.5,   // Escala da copa
-            crownOffsetY: 0.7, // Altura da copa sobre o tronco
+            trunk: { min: 0.3, max: 0.5 },
+            crown: { min: 0.3, max: 0.5 },
+            crownOffsetY: { min: 0.3, max: 0.8 },
         },
-        // Carvalho (Oak)
         oak: {
-            trunk: 0.5,
-            crown: 0.5,
-            crownOffsetY: 0.65,
+            trunk: { min: 0.3, max: 0.45 },
+            crown: { min: 0.3, max: 0.45 },
+            crownOffsetY: { min: 0.3, max: 0.5 },
         },
     },
     
@@ -28,11 +26,20 @@ const SETTINGS = {
     
     // Spawn da floresta
     spawn: {
-        maxEvergreens: 8,   // Número máximo de pinheiros
-        maxOaks: 5,         // Número máximo de carvalhos
-        areaRadius: 20,     // Raio da área de spawn (em unidades)
-        minDistanceApart: 2.0, // Distância mínima entre árvores
-        groundY: 0.5,       // Altura Y onde as árvores spawnam
+        totalTrees: 20,            // Número total de árvores a spawnar
+        evergreenPercent: 0.6,     // Percentagem de pinheiros (0-1)
+        oakPercent: 0.4,           // Percentagem de carvalhos (0-1)
+        areaRadius: 30,            // Raio da área de spawn (em unidades)
+        minDistanceApart: 3.0,     // Distância mínima entre árvores
+        groundY: 0.5,              // Altura Y onde as árvores spawnam
+        clearZoneRadius: 8,        // Raio da zona central circular reservada (fogueira, tenda, etc)
+        // Zonas de exclusão adicionais (circular e rectangular)
+        exclusionZones: [
+            // Exemplo: Zona da queda de água (circular)
+            // { type: 'circle', x: 15, z: -10, radius: 5 },
+            // Exemplo: Zona do rio (rectangular)
+            // { type: 'rect', x: 8, z: 0, halfW: 2, halfD: 12 },
+        ],
     },
 
     // LOD e otimizações de performance
@@ -60,6 +67,16 @@ let treeInstances = []; // Metadados de cada árvore para animação
 let raccoonPosition = new THREE.Vector3(0, 0, 0); // Posição atual do guaxinim (para LOD)
 
 // ─── Funções Privadas ─────────────────────────────────────────────────────
+
+/**
+ * Gera um número aleatório entre min e max.
+ * @param {number} min - Valor mínimo
+ * @param {number} max - Valor máximo
+ * @returns {number} Número aleatório entre min e max
+ */
+function randomBetween(min, max) {
+    return min + Math.random() * (max - min);
+}
 
 /**
  * Carrega todos os modelos GLB e extrai geometria + material.
@@ -144,13 +161,16 @@ function createInstancedMesh(meshData, count) {
 }
 
 /**
- * Gera uma posição aleatória dentro da área de spawn, respeitando distância mínima.
+ * Gera uma posição aleatória dentro da área de spawn, respeitando:
+ * - Distância mínima entre árvores
+ * - Zona de exclusão central (clearZoneRadius)
+ * - Zonas de exclusão adicionais (circular e rectangular)
  * @param {Array<THREE.Vector3>} existingPositions - Posições já ocupadas
  * @returns {THREE.Vector3|null} Nova posição se possível, null se limite atingido
  */
 function getRandomSpawnPosition(existingPositions) {
-    const { areaRadius, minDistanceApart, groundY } = SETTINGS.spawn;
-    const maxAttempts = 30;
+    const { areaRadius, minDistanceApart, groundY, clearZoneRadius, exclusionZones } = SETTINGS.spawn;
+    const maxAttempts = 50;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const angle = Math.random() * Math.PI * 2;
@@ -159,6 +179,36 @@ function getRandomSpawnPosition(existingPositions) {
         const z = Math.sin(angle) * radius;
 
         const newPos = new THREE.Vector3(x, groundY, z);
+
+        // Verificar zona central de exclusão (clearZoneRadius)
+        const distToCenter = Math.sqrt(x * x + z * z);
+        if (distToCenter < clearZoneRadius) {
+            continue;
+        }
+
+        // Verificar zonas de exclusão adicionais
+        let inExclusionZone = false;
+        for (const zone of exclusionZones) {
+            if (zone.type === 'circle') {
+                const dx = newPos.x - zone.x;
+                const dz = newPos.z - zone.z;
+                const distToZone = Math.sqrt(dx * dx + dz * dz);
+                if (distToZone < zone.radius) {
+                    inExclusionZone = true;
+                    break;
+                }
+            } else if (zone.type === 'rect') {
+                const dx = Math.abs(newPos.x - zone.x);
+                const dz = Math.abs(newPos.z - zone.z);
+                if (dx < zone.halfW && dz < zone.halfD) {
+                    inExclusionZone = true;
+                    break;
+                }
+            }
+        }
+        if (inExclusionZone) {
+            continue;
+        }
 
         // Verificar distância mínima com árvores existentes
         let valid = true;
@@ -183,8 +233,21 @@ function getRandomSpawnPosition(existingPositions) {
  * Popula a cena com uma floresta usando InstancedMesh (otimizado para performance).
  * @param {THREE.Scene} scene - Cena Three.js
  * @param {THREE.Group} raccoon - Modelo do guaxinim (para LOD)
+ * @param {Object} options - Opções de spawn configuráveis
+ *   @param {number} options.totalTrees - Número total de árvores a spawnar (default: SETTINGS.spawn.totalTrees)
+ *   @param {number} options.evergreenPercent - Percentagem de pinheiros (0-1, default: SETTINGS.spawn.evergreenPercent)
+ *   @param {number} options.oakPercent - Percentagem de carvalhos (0-1, default: SETTINGS.spawn.oakPercent)
  */
-async function spawnForest(scene, raccoon) {
+async function spawnForest(scene, raccoon, options = {}) {
+    // Usar valores padrão do SETTINGS se não forem fornecidas opções
+    const totalTrees = options.totalTrees !== undefined ? options.totalTrees : SETTINGS.spawn.totalTrees;
+    const evergreenPercent = options.evergreenPercent !== undefined ? options.evergreenPercent : SETTINGS.spawn.evergreenPercent;
+    const oakPercent = options.oakPercent !== undefined ? options.oakPercent : SETTINGS.spawn.oakPercent;
+
+    // Calcular número de árvores de cada tipo baseado em percentagens
+    const maxEvergreens = Math.ceil(totalTrees * evergreenPercent);
+    const maxOaks = Math.ceil(totalTrees * oakPercent);
+
     // Awaitar carregamento dos modelos
     await loadAllModels();
 
@@ -193,7 +256,6 @@ async function spawnForest(scene, raccoon) {
         raccoonPosition.copy(raccoon.position);
     }
 
-    const { maxEvergreens, maxOaks } = SETTINGS.spawn;
     const usedPositions = [];
 
     // ── Criar InstancedMeshes ──
@@ -207,28 +269,32 @@ async function spawnForest(scene, raccoon) {
     for (let i = 0; i < maxEvergreens; i++) {
         const pos = getRandomSpawnPosition(usedPositions);
         if (pos) {
-            const config = SETTINGS.scale.evergreen;
+            // Gerar escalas aleatórias para esta árvore
+            const randomTrunkScale = randomBetween(SETTINGS.scale.evergreen.trunk.min, SETTINGS.scale.evergreen.trunk.max);
+            const randomCrownScale = randomBetween(SETTINGS.scale.evergreen.crown.min, SETTINGS.scale.evergreen.crown.max);
+            const randomCrownOffsetY = randomBetween(SETTINGS.scale.evergreen.crownOffsetY.min, SETTINGS.scale.evergreen.crownOffsetY.max);
             
             // Matriz para tronco
             const trunkMatrix = new THREE.Matrix4()
-                .compose(pos, new THREE.Quaternion(), new THREE.Vector3(config.trunk, config.trunk, config.trunk));
+                .compose(pos, new THREE.Quaternion(), new THREE.Vector3(randomTrunkScale, randomTrunkScale, randomTrunkScale));
             instancedMeshes.trunkEvergreen.setMatrixAt(evergreenIndex, trunkMatrix);
 
-            // Matriz para copa (com offset Y)
+            // Matriz para copa (com offset Y aleatório)
             const crownPos = pos.clone();
-            crownPos.y += config.crownOffsetY;
+            crownPos.y += randomCrownOffsetY;
             const crownMatrix = new THREE.Matrix4()
-                .compose(crownPos, new THREE.Quaternion(), new THREE.Vector3(config.crown, config.crown, config.crown));
+                .compose(crownPos, new THREE.Quaternion(), new THREE.Vector3(randomCrownScale, randomCrownScale, randomCrownScale));
             instancedMeshes.crownEvergreen.setMatrixAt(evergreenIndex, crownMatrix);
 
-            // Guardar metadados para animação
+            // Guardar metadados para animação (incluindo o crownOffsetY real gerado)
             treeInstances.push({
                 type: 'evergreen',
                 index: evergreenIndex,
                 position: pos,
                 windPhaseOffset: Math.random() * Math.PI * 2,
                 basePosition: pos.clone(),
-                crownOffsetY: config.crownOffsetY,
+                crownOffsetY: randomCrownOffsetY,
+                randomScale: randomCrownScale,
             });
 
             usedPositions.push(pos.clone());
@@ -245,28 +311,32 @@ async function spawnForest(scene, raccoon) {
     for (let i = 0; i < maxOaks; i++) {
         const pos = getRandomSpawnPosition(usedPositions);
         if (pos) {
-            const config = SETTINGS.scale.oak;
+            // Gerar escalas aleatórias para esta árvore
+            const randomTrunkScale = randomBetween(SETTINGS.scale.oak.trunk.min, SETTINGS.scale.oak.trunk.max);
+            const randomCrownScale = randomBetween(SETTINGS.scale.oak.crown.min, SETTINGS.scale.oak.crown.max);
+            const randomCrownOffsetY = randomBetween(SETTINGS.scale.oak.crownOffsetY.min, SETTINGS.scale.oak.crownOffsetY.max);
             
             // Matriz para tronco
             const trunkMatrix = new THREE.Matrix4()
-                .compose(pos, new THREE.Quaternion(), new THREE.Vector3(config.trunk, config.trunk, config.trunk));
+                .compose(pos, new THREE.Quaternion(), new THREE.Vector3(randomTrunkScale, randomTrunkScale, randomTrunkScale));
             instancedMeshes.trunkOak.setMatrixAt(oakIndex, trunkMatrix);
 
-            // Matriz para copa (com offset Y)
+            // Matriz para copa (com offset Y aleatório)
             const crownPos = pos.clone();
-            crownPos.y += config.crownOffsetY;
+            crownPos.y += randomCrownOffsetY;
             const crownMatrix = new THREE.Matrix4()
-                .compose(crownPos, new THREE.Quaternion(), new THREE.Vector3(config.crown, config.crown, config.crown));
+                .compose(crownPos, new THREE.Quaternion(), new THREE.Vector3(randomCrownScale, randomCrownScale, randomCrownScale));
             instancedMeshes.crownOak.setMatrixAt(oakIndex, crownMatrix);
 
-            // Guardar metadados para animação
+            // Guardar metadados para animação (incluindo o crownOffsetY real gerado)
             treeInstances.push({
                 type: 'oak',
                 index: oakIndex,
                 position: pos,
                 windPhaseOffset: Math.random() * Math.PI * 2,
                 basePosition: pos.clone(),
-                crownOffsetY: config.crownOffsetY,
+                crownOffsetY: randomCrownOffsetY,
+                randomScale: randomCrownScale,
             });
 
             usedPositions.push(pos.clone());
@@ -299,7 +369,7 @@ async function spawnForest(scene, raccoon) {
         scene.add(instancedMeshes.crownOak);
     }
 
-    console.log(`Floresta criada: ${evergreenIndex + oakIndex} árvores (InstancedMesh otimizado)`);
+    console.log(`Floresta criada: ${evergreenIndex + oakIndex} árvores (${evergreenIndex} pinheiros, ${oakIndex} carvalhos)`);
 }
 
 /**
@@ -342,7 +412,7 @@ function update(delta, playerPos) {
         qZ.setFromAxisAngle(new THREE.Vector3(0, 0, 1), rotZ);
         const quaternion = qX.multiply(qZ);
 
-        // Posição da copa (com offset Y do tronco)
+        // Posição da copa (com offset Y real armazenado nos metadados)
         const crownPos = tree.basePosition.clone();
         crownPos.y += tree.crownOffsetY;
 
@@ -350,8 +420,8 @@ function update(delta, playerPos) {
         const matrix = new THREE.Matrix4()
             .compose(crownPos, quaternion, new THREE.Vector3(1, 1, 1));
 
-        // Aplicar escala
-        const scale = SETTINGS.scale[tree.type].crown;
+        // Aplicar escala real (armazenada nos metadados)
+        const scale = tree.randomScale;
         matrix.scale(new THREE.Vector3(scale, scale, scale));
 
         // Atualizar InstancedMesh
