@@ -74,8 +74,8 @@ orbitControls.enablePan = false;
 const raccoon = new Raccoon(scene);
 // Passamos o modelo do guaxinim para a câmara depois de carregado
 raccoon.modelLoaded.then(() => {
-    // Spawnar floresta
-    spawnForest(scene);
+    // Spawnar floresta (passa o raccoon para LOD)
+    spawnForest(scene, raccoon.model);
     
     const thirdPersonCamera = new ThirdPersonCamera(camera, raccoon.model, renderer.domElement, orbitControls);
     
@@ -91,8 +91,8 @@ raccoon.modelLoaded.then(() => {
         // Atualizar a lógica do guaxinim (animações e movimento)
         raccoon.update(delta, keyStates);
 
-        // Atualizar animação de vento das árvores
-        updateTrees(delta);
+        // Atualizar animação de vento das árvores (com LOD baseado na posição do raccoon)
+        updateTrees(delta, raccoon.model.position);
 
         // Atualizar a câmara de terceira pessoa (agora passando isRunning para efeitos de velocidade)
         thirdPersonCamera.update(isMoving, orbitControls, isRunning);

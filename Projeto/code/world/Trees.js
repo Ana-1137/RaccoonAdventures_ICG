@@ -34,6 +34,11 @@ const SETTINGS = {
         minDistanceApart: 2.0, // Distância mínima entre árvores
         groundY: 0.5,       // Altura Y onde as árvores spawnam
     },
+
+    // LOD e otimizações de performance
+    lod: {
+        maxUpdateDistance: 30, // Máxima distância ao guaxinim para atualizar animação de vento
+    },
 };
 
 // ─── Variáveis Globais ─────────────────────────────────────────────────────
@@ -52,6 +57,7 @@ let instancedMeshes = {
 };
 
 let treeInstances = []; // Metadados de cada árvore para animação
+let raccoonPosition = new THREE.Vector3(0, 0, 0); // Posição atual do guaxinim (para LOD)
 
 // ─── Funções Privadas ─────────────────────────────────────────────────────
 
@@ -123,9 +129,17 @@ function extractFirstMesh(gltf) {
  */
 function createInstancedMesh(meshData, count) {
     const { geometry, material } = meshData;
+    
+    // Garantir que o material renderiza apenas a face frontal (otimização)
+    material.side = THREE.FrontSide;
+    
     const instancedMesh = new THREE.InstancedMesh(geometry, material, count);
     instancedMesh.castShadow = true;
     instancedMesh.receiveShadow = true;
+    
+    // Ativar frustum culling (deve estar ativo por defeito, mas confirmar)
+    instancedMesh.frustumCulled = true;
+    
     return instancedMesh;
 }
 
@@ -168,10 +182,16 @@ function getRandomSpawnPosition(existingPositions) {
 /**
  * Popula a cena com uma floresta usando InstancedMesh (otimizado para performance).
  * @param {THREE.Scene} scene - Cena Three.js
+ * @param {THREE.Group} raccoon - Modelo do guaxinim (para LOD)
  */
-async function spawnForest(scene) {
+async function spawnForest(scene, raccoon) {
     // Awaitar carregamento dos modelos
     await loadAllModels();
+
+    // Guardar referência ao marcho do guaxinim para LOD
+    if (raccoon) {
+        raccoonPosition.copy(raccoon.position);
+    }
 
     const { maxEvergreens, maxOaks } = SETTINGS.spawn;
     const usedPositions = [];
@@ -274,13 +294,29 @@ async function spawnForest(scene) {
 /**
  * Atualiza a animação de vento de todas as copas.
  * Usa setMatrixAt para atualizar cada instância com rotação procedural.
+ * LOD: apenas árvores próximas ao guaxinim são animadas.
  * @param {number} delta - Tempo desde o último frame (segundos)
+ * @param {THREE.Vector3} playerPos - Posição do guaxinim (para LOD)
  */
-function update(delta) {
+function update(delta, playerPos) {
     const now = Date.now() / 1000; // Tempo em segundos
     const { speed, intensityX, intensityZ } = SETTINGS.wind;
+    const { maxUpdateDistance } = SETTINGS.lod;
+
+    // Atualizar posição do guaxinim se fornecida
+    if (playerPos) {
+        raccoonPosition.copy(playerPos);
+    }
 
     for (const tree of treeInstances) {
+        // ── LOD: Verificar distância ──
+        const distance = tree.basePosition.distanceTo(raccoonPosition);
+        
+        // Se a árvore está muito longe, não animar (apenas manter a posição estática)
+        if (distance > maxUpdateDistance) {
+            continue;
+        }
+
         // Calcular tempo com offset de fase aleatório
         const time = now * speed + tree.windPhaseOffset;
 
