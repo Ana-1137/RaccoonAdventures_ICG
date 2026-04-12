@@ -1,15 +1,21 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createScene } from './world/scene.js';
+import { createScene, createGround } from './world/scene.js';
 import { createLights } from './world/lights.js';
 import { Raccoon } from './entities/Raccoon.js';
 import { ThirdPersonCamera } from './controls/ThirdPersonCamera.js';
 import { keyStates } from './controls/KeyboardControls.js';
 import { spawnForest, update as updateTrees } from './world/Trees.js';
 
+
 // Elementos principais da cena
 const scene = createScene();
 createLights(scene);
+
+// Criar o chão com texturas PBR (relva base + terra da fogueira)
+const { groundMesh, campfireMesh } = createGround();
+scene.add(groundMesh);
+scene.add(campfireMesh);
 
 // Câmara e Renderer
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
@@ -105,15 +111,6 @@ raccoon.modelLoaded.then(() => {
 
     animate();
 });
-
-
-// Chão
-const planeGeometry = new THREE.PlaneGeometry(50, 50);
-const planeMaterial = new THREE.MeshPhongMaterial({ color: 'rgb(50, 100, 50)', side: THREE.DoubleSide });
-const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-plane.rotation.x = -Math.PI / 2;
-plane.receiveShadow = true;
-scene.add(plane);
 
 // Lidar com o redimensionamento da janela
 window.addEventListener('resize', () => {
