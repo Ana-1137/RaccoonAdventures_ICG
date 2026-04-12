@@ -24,27 +24,22 @@ const SETTINGS = {
         intensityZ: 0.12, // Intensidade de rotação em Z (radianos)
     },
     
-    // Spawn da floresta
+    // Spawn da floresta com sistema de dois anéis
     spawn: {
-        totalTrees: 100,            // Número total de árvores a spawnar
-        evergreenPercent: 0.5,     // Percentagem de pinheiros (0-1)
-        oakPercent: 0.5,           // Percentagem de carvalhos (0-1)
-        areaRadius: 30,            // Raio da área de spawn (em unidades)
-        minDistanceApart: 2.0,     // Distância mínima entre árvores
+        totalTrees: 80,            // Número total de árvores a spawnar
+        evergreenPercent: 0.6,     // Percentagem de pinheiros (0-1)
+        oakPercent: 0.4,           // Percentagem de carvalhos (0-1)
+        innerRadius: 6,            // Raio da zona reservada central (fogueira, tenda) — sem árvores
+        outerRadius: 18,           // Raio máximo de spawn — floresta densa entre inner e outer
+        minDistanceApart: 1.8,     // Distância mínima entre árvores
         groundY: 0.0,              // Altura Y onde as árvores spawnam
-        clearZoneRadius: 3,        // Raio da zona central circular reservada (fogueira, tenda, etc)
-        // Zonas de exclusão adicionais (circular e rectangular)
-        exclusionZones: [
-            // Exemplo: Zona da queda de água (circular)
-            // { type: 'circle', x: 15, z: -10, radius: 5 },
-            // Exemplo: Zona do rio (rectangular)
-            // { type: 'rect', x: 8, z: 0, halfW: 2, halfD: 12 },
-        ],
+        exclusionZones: [],        // Zonas de exclusão adicionais (circular e rectangular)
     },
 
-    // LOD e otimizações de performance
+    // LOD e otimizações de performance com dois níveis
     lod: {
-        maxUpdateDistance: 30, // Máxima distância ao guaxinim para atualizar animação de vento
+        animateDistance: 8,   // Árvores até esta distância têm animação de vento
+        staticDistance: 25,   // Árvores além disto ficam completamente estáticas
     },
 };
 
@@ -168,32 +163,25 @@ function createInstancedMesh(meshData, count) {
 }
 
 /**
- * Gera uma posição aleatória dentro da área de spawn, respeitando:
- * - Distância mínima entre árvores
- * - Zona de exclusão central (clearZoneRadius)
- * - Zonas de exclusão adicionais (circular e rectangular)
+ * Gera uma posição aleatória no anel de spawn entre innerRadius e outerRadius.
+ * Respeita distância mínima entre árvores.
  * @param {Array<THREE.Vector3>} existingPositions - Posições já ocupadas
  * @returns {THREE.Vector3|null} Nova posição se possível, null se limite atingido
  */
 function getRandomSpawnPosition(existingPositions) {
-    const { areaRadius, minDistanceApart, groundY, clearZoneRadius, exclusionZones } = SETTINGS.spawn;
+    const { innerRadius, outerRadius, minDistanceApart, groundY, exclusionZones } = SETTINGS.spawn;
     const maxAttempts = 50;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        // Spawn uniforme no anel entre os dois raios
         const angle = Math.random() * Math.PI * 2;
-        const radius = Math.random() * areaRadius;
+        const radius = innerRadius + Math.random() * (outerRadius - innerRadius);
         const x = Math.cos(angle) * radius;
         const z = Math.sin(angle) * radius;
 
         const newPos = new THREE.Vector3(x, groundY, z);
 
-        // Verificar zona central de exclusão (clearZoneRadius)
-        const distToCenter = Math.sqrt(x * x + z * z);
-        if (distToCenter < clearZoneRadius) {
-            continue;
-        }
-
-        // Verificar zonas de exclusão adicionais
+        // Verificar zonas de exclusão adicionais (se existirem)
         let inExclusionZone = false;
         for (const zone of exclusionZones) {
             if (zone.type === 'circle') {
@@ -405,7 +393,7 @@ async function spawnForest(scene, raccoon, options = {}) {
 function update(delta, playerPos) {
     const now = Date.now() / 1000; // Tempo em segundos
     const { speed, intensityX, intensityZ } = SETTINGS.wind;
-    const { maxUpdateDistance } = SETTINGS.lod;
+    const { animateDistance, staticDistance } = SETTINGS.lod;
 
     // Atualizar posição do guaxinim se fornecida
     if (playerPos) {
@@ -416,11 +404,17 @@ function update(delta, playerPos) {
         // ── LOD: Verificar distância ──
         const distance = tree.basePosition.distanceTo(raccoonPosition);
         
-        // Se a árvore está muito longe, não animar (apenas manter a posição estática)
-        if (distance > maxUpdateDistance) {
+        // Árvores além de staticDistance são ignoradas completamente (frustum culling)
+        if (distance >= staticDistance) {
+            continue;
+        }
+        
+        // Árvores entre animateDistance e staticDistance: manter posição estática (não animar)
+        if (distance >= animateDistance) {
             continue;
         }
 
+        // Árvores até animateDistance: animar normalmente
         // Calcular tempo com offset de fase aleatório
         const time = now * speed + tree.windPhaseOffset;
 
