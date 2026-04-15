@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { createGround } from './scene.js';
 import { spawnForest } from './Trees.js';
 import { loadTent } from '../entities/Tent.js';

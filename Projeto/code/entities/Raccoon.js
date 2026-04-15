@@ -17,8 +17,8 @@ const SETTINGS = {
         jumpPower: 0.8,   // Ajustado proporcionalmente para manter altura máxima (h ≈ 0.51)
         rayHeight: 0.6,   // raio para baixo a partir dos pés
         ceilingCheckHeight: 0.5, // teto
-        maxStepHeight: 0.2, // degraus
-        ledgeDepth: 1.5,  // profundidade
+        maxStepHeight: 0.15, // degraus
+        ledgeDepth: 0.8,  // profundidade reduzida para ativar medo mais frequentemente
         ledgeOffset: 0.1, // Margem bem mais curta (Fase 12 Final)
         // ── Refinamento de Raycast (Fase 12 - Rampas) ──
         maxLandingDistance: -0.02, // distância máxima de caída permitida em rampas (negativo = para baixo)
@@ -37,7 +37,7 @@ const SETTINGS = {
         launchDelay: 0.15,             // Delay antes da aplicação do impulso (sincronização com prep frames)
     },
     terrified: {
-        heightThreshold: 0.5,           // altura absoluta em que começa a ter medo
+        heightThreshold: 0.6,            // altura absoluta em que começa a ter medo
         maxHeightThreshold: 1.0,        // altura máxima para poder saltar com medo (ex: tenda). Acima disto, paralisia total
         loopStartFrame: 30,             // Início
         loopEndFrame: 60,              // Cortar mais cedo para evitar abaixar-se (Fase 12 Final)
@@ -242,16 +242,14 @@ class Raccoon {
     }
 
     /**
-     * Coloca o guaxinim no estado inicial: sentado no chão.
+     * Coloca o guaxinim no estado inicial: em pé e à espera (teste de medo no cilindro).
      */
     _initStartingState() {
-        this.currentState = STATES.SITTING;
-        const sitAction = this.actions['sit'];
-        if (sitAction) {
-            this.activeAction = sitAction;
+        this.currentState = STATES.IDLE;
+        const idleAction = this.actions['idle'];
+        if (idleAction) {
+            this.activeAction = idleAction;
             this.activeAction.play();
-            this.activeAction.paused = true;
-            this.activeAction.time = sitAction.getClip().duration;
         }
     }
 
@@ -831,27 +829,37 @@ class Raccoon {
 
         let scaryDepth = false;
         const isAboveThreshold = this.model.position.y > SETTINGS.terrified.heightThreshold;
+        
         if (intersects.length > 0) {
             const depth = this.model.position.y - intersects[0].point.y;
             // Buffer de estabilidade: se já estivermos com medo, aceitamos uma profundidade menor
             const threshold = (this.currentState === STATES.TERRIFIED) ? (SETTINGS.physics.ledgeDepth * 0.8) : SETTINGS.physics.ledgeDepth;
+            
+            // DEBUG
+            if (isMoving) {
+                console.log(`🔍 Ledge Detection: depth=${depth.toFixed(2)}, threshold=${threshold.toFixed(2)}, isAboveThreshold=${isAboveThreshold}, pos.y=${this.model.position.y.toFixed(2)}`);
+            }
+            
             if (depth > threshold) {
                 scaryDepth = true;
             }
         } else {
             scaryDepth = true; // Precipício total
+            console.log(`⚠️ Precipício total detetado! pos.y=${this.model.position.y.toFixed(2)}, threshold=${SETTINGS.terrified.heightThreshold}`);
         }
 
         // Se houver abismo E estiver muito alto, ativamos o medo
         // (precisa de ambas as condições: altura + edge à frente)
         if (scaryDepth && isAboveThreshold) {
             if (this.currentState !== STATES.TERRIFIED) {
+                console.log(`😱 MEDO ATIVADO! scaryDepth=${scaryDepth}, isAboveThreshold=${isAboveThreshold}`);
                 this.currentState = STATES.TERRIFIED;
                 this.fadeToAction('terrified_loop', SETTINGS.blend.toTerrified);
             }
         } else if (this.currentState === STATES.TERRIFIED) {
             // Sai do medo se: não há abismo à frente OU desceu abaixo do threshold
             if (!scaryDepth || !isAboveThreshold) {
+                console.log(`😌 Saiu do medo. scaryDepth=${scaryDepth}, isAboveThreshold=${isAboveThreshold}`);
                 this.currentState = STATES.IDLE;
                 this.fadeToAction('idle', SETTINGS.blend.toIdle);
             }
