@@ -8,8 +8,8 @@ const SETTINGS = {
         scale: 0.1,   // fator de escala (1 unidade Three = 10 unidades FBX)
     },
     speed: {
-        walk: 6,    // unidades/s enquanto caminha
-        run: 15,   // unidades/s enquanto corre
+        walk: 3,    // unidades/s enquanto caminha
+        run: 7,   // unidades/s enquanto corre
         rotate: 3.5,  // rad/s de rotação (ajustado para melhor controlo)
     },
     physics: {
