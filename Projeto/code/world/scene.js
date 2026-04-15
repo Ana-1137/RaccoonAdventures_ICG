@@ -297,6 +297,7 @@ function createGround() {
     );
     campfireMesh.rotation.x = -Math.PI / 2;
     campfireMesh.receiveShadow = true;
+    campfireMesh.raycast = () => {}; // Ignorar raycasts (assim não interfere com física do personagem)
 
     return { groundMesh, campfireMesh };
 }
