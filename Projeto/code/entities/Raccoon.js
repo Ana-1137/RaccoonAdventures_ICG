@@ -9,8 +9,8 @@ const SETTINGS = {
     },
     speed: {
         walk: 3,    // unidades/s enquanto caminha
-        run: 20,   // unidades/s enquanto corre
-        // run: 7,   // unidades/s enquanto corre
+        // run: 20,   // unidades/s enquanto corre
+        run: 7,   // unidades/s enquanto corre
         rotate: 3.5,  // rad/s de rotação (ajustado para melhor controlo)
     },
     physics: {
