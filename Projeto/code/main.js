@@ -7,6 +7,7 @@ import { Raccoon } from './entities/Raccoon.js';
 import { ThirdPersonCamera } from './controls/ThirdPersonCamera.js';
 import { keyStates } from './controls/KeyboardControls.js';
 import { update as updateTrees } from './world/Trees.js';
+import { updateWater } from './entities/Water.js';
 
 
 // Elementos principais da cena
@@ -77,7 +78,7 @@ const raccoon = new Raccoon(scene);
 // Passamos o modelo do guaxinim para a câmara depois de carregado
 raccoon.modelLoaded.then(async () => {
     // Construir o mundo (carregar floresta, tenda, e outros elementos)
-    await buildWorld(scene, raccoon.model);
+    const world = await buildWorld(scene, raccoon.model);
     
     const thirdPersonCamera = new ThirdPersonCamera(camera, raccoon.model, renderer.domElement, orbitControls);
     
@@ -95,6 +96,11 @@ raccoon.modelLoaded.then(async () => {
 
         // Atualizar animação de vento das árvores (com LOD baseado na posição do raccoon)
         updateTrees(delta, raccoon.model.position);
+
+        // Atualizar a animação da água (ondas)
+        if (world.basin) {
+            updateWater(world.basin, delta);
+        }
 
         // Atualizar a câmara de terceira pessoa (agora passando isRunning para efeitos de velocidade)
         thirdPersonCamera.update(isMoving, orbitControls, isRunning);
