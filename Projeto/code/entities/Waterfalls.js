@@ -5,18 +5,45 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const SETTINGS = {
     cascata1: {
         file: '../elements/cascata1.glb',
-        scale: 1.0,
-        position: { x: 5.5, y: 0.99, z: -5.0 },  // Esquerda, acima do chão, afastada do cenário
+        scale: 2.0,
+        position: { x: 0.5, y: 1.99, z: -4.5 },
         rotation: 0,
     },
     cascata2: {
         file: '../elements/cascata2.glb',
-        scale: 1.0,
-        position: { x: 2.5, y: 0.99, z: -5.0 },   // Direita, acima do chão, afastada do cenário (espaço para água)
+        scale: 2.0,
+        position: { x: 5.5, y: 1.99, z: -4.5 },
         rotation: 0,
     },
-    // Espaço entre cascatas: 5 unidades (2.5 + 2.5) - perfeito para adicionar partículas de água
+    
+    // Zona de exclusão para as árvores (calculada baseada nas posições)
+    exclusionZone: {
+        type: 'rect',
+        halfW: 3.5,  // 7 unidades de largura
+        halfD: 3.5,  // 7 unidades de profundidade
+    },
+    
+    // Posição da água (entre as cascatas)
+    waterArea: {
+        y: 0.1,  // Altura da água
+    },
 };
+
+// Calcular a zona de exclusão dinamicamente baseada nas posições das cascatas
+SETTINGS.exclusionZone.x = (SETTINGS.cascata1.position.x + SETTINGS.cascata2.position.x) / 2;
+SETTINGS.exclusionZone.z = SETTINGS.cascata1.position.z;
+
+// Calcular a posição da água
+SETTINGS.waterArea.x = (SETTINGS.cascata1.position.x + SETTINGS.cascata2.position.x) / 2;
+SETTINGS.waterArea.z = SETTINGS.cascata1.position.z;
+
+// ─── Variáveis Globais ─────────────────────────────────────────────────────
+let loadedCascatas = {
+    cascata1: null,
+    cascata2: null,
+};
+
+// ─── Funções Privadas ─────────────────────────────────────────────────────
 
 /**
  * Carrega um modelo de cascata individual.
@@ -64,6 +91,8 @@ function loadWaterfallModel(loader, file, config) {
     });
 }
 
+// ─── Funções Públicas ─────────────────────────────────────────────────────
+
 /**
  * Carrega ambas as cascatas (esquerda e direita) na cena.
  * @param {THREE.Scene} scene - Cena Three.js
@@ -80,6 +109,10 @@ function loadWaterfalls(scene) {
                 loadWaterfallModel(loader, SETTINGS.cascata2.file, SETTINGS.cascata2),
             ]);
             
+            // Guardar referências globais
+            loadedCascatas.cascata1 = cascata1;
+            loadedCascatas.cascata2 = cascata2;
+            
             // Adicionar à cena
             scene.add(cascata1);
             scene.add(cascata2);
@@ -93,23 +126,5 @@ function loadWaterfalls(scene) {
     });
 }
 
-/**
- * Obtém a posição do espaço entre as cascatas (útil para adicionar água depois)
- * @returns {Object} Posição central entre as cascatas { x, z }
- */
-function getWaterAreaPosition() {
-    return {
-        x: 0, // Centro entre as cascatas
-        z: 0,
-    };
-}
-
-/**
- * Obtém as configurações atuais das cascatas
- * @returns {Object} Objeto SETTINGS com as configurações
- */
-function getWaterfallsSettings() {
-    return SETTINGS;
-}
-
-export { loadWaterfalls, getWaterAreaPosition, getWaterfallsSettings, SETTINGS };
+// ─────────────────────────────────────────────────────────────────────────────
+export { loadWaterfalls, SETTINGS };

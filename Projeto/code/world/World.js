@@ -4,7 +4,7 @@ import { spawnForest } from './Trees.js';
 import { loadTent } from '../entities/Tent.js';
 import { loadCampfire } from '../entities/Campfire.js';
 import { loadLogBenches } from '../entities/LogBench.js';
-import { loadWaterfalls } from '../entities/Waterfalls.js';
+import { loadWaterfalls, SETTINGS as WATERFALLS_SETTINGS } from '../entities/Waterfalls.js';
 
 /**
  * Constrói o mundo carregando todos os elementos da cena em paralelo.
@@ -19,8 +19,9 @@ export async function buildWorld(scene, raccoon) {
     scene.add(campfireMesh);
     
     // Carregar floresta, tenda, fogueira, logs e cascatas em paralelo
+    // A floresta recebe a zona de exclusão das cascatas para evitar árvores no mesmo local
     const [forest, tent, campfire, logBenches, waterfalls] = await Promise.all([
-        spawnForest(scene, raccoon),
+        spawnForest(scene, raccoon, { exclusionZones: [WATERFALLS_SETTINGS.exclusionZone] }),
         loadTent(scene),
         loadCampfire(scene),
         loadLogBenches(scene),

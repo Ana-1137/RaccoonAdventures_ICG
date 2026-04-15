@@ -33,7 +33,6 @@ const SETTINGS = {
         outerRadius: 8,           // Raio máximo de spawn — floresta densa entre inner e outer
         minDistanceApart: 0.6,     // Distância mínima entre árvores
         groundY: 0.0,              // Altura Y onde as árvores spawnam
-        exclusionZones: [],        // Zonas de exclusão adicionais (circular e rectangular)
     },
 
     // LOD e otimizações de performance com dois níveis
@@ -168,8 +167,8 @@ function createInstancedMesh(meshData, count) {
  * @param {Array<THREE.Vector3>} existingPositions - Posições já ocupadas
  * @returns {THREE.Vector3|null} Nova posição se possível, null se limite atingido
  */
-function getRandomSpawnPosition(existingPositions) {
-    const { innerRadius, outerRadius, minDistanceApart, groundY, exclusionZones } = SETTINGS.spawn;
+function getRandomSpawnPosition(existingPositions, exclusionZones = []) {
+    const { innerRadius, outerRadius, minDistanceApart, groundY } = SETTINGS.spawn;
     const maxAttempts = 50;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -232,12 +231,16 @@ function getRandomSpawnPosition(existingPositions) {
  *   @param {number} options.totalTrees - Número total de árvores a spawnar (default: SETTINGS.spawn.totalTrees)
  *   @param {number} options.evergreenPercent - Percentagem de pinheiros (0-1, default: SETTINGS.spawn.evergreenPercent)
  *   @param {number} options.oakPercent - Percentagem de carvalhos (0-1, default: SETTINGS.spawn.oakPercent)
+ *   @param {Array} options.exclusionZones - Zonas de exclusão adicionais (default: [])
  */
 async function spawnForest(scene, raccoon, options = {}) {
     // Usar valores padrão do SETTINGS se não forem fornecidas opções
     const totalTrees = options.totalTrees !== undefined ? options.totalTrees : SETTINGS.spawn.totalTrees;
     const evergreenPercent = options.evergreenPercent !== undefined ? options.evergreenPercent : SETTINGS.spawn.evergreenPercent;
     const oakPercent = options.oakPercent !== undefined ? options.oakPercent : SETTINGS.spawn.oakPercent;
+    
+    // Obter zonas de exclusão das opções (default: array vazio)
+    const exclusionZones = options.exclusionZones || [];
 
     // Calcular número de árvores de cada tipo baseado em percentagens
     const maxEvergreens = Math.ceil(totalTrees * evergreenPercent);
@@ -262,9 +265,9 @@ async function spawnForest(scene, raccoon, options = {}) {
     // ── Spawnar pinheiros ──
     let evergreenIndex = 0;
     for (let i = 0; i < maxEvergreens; i++) {
-        const pos = getRandomSpawnPosition(usedPositions);
+        const pos = getRandomSpawnPosition(usedPositions, exclusionZones);
         if (pos) {
-            // Gerar escalas aleatórias para esta árvore
+            // Gerar escalas aleatórias para esta árvore, exclusionZones
             const randomTrunkScale = randomBetween(SETTINGS.scale.evergreen.trunk.min, SETTINGS.scale.evergreen.trunk.max);
             const randomCrownScale = randomBetween(SETTINGS.scale.evergreen.crown.min, SETTINGS.scale.evergreen.crown.max);
             const randomCrownOffsetY = randomBetween(SETTINGS.scale.evergreen.crownOffsetY.min, SETTINGS.scale.evergreen.crownOffsetY.max);
@@ -312,7 +315,7 @@ async function spawnForest(scene, raccoon, options = {}) {
     // ── Spawnar carvalhos ──
     let oakIndex = 0;
     for (let i = 0; i < maxOaks; i++) {
-        const pos = getRandomSpawnPosition(usedPositions);
+        const pos = getRandomSpawnPosition(usedPositions, exclusionZones);
         if (pos) {
             // Gerar escalas aleatórias para esta árvore
             const randomTrunkScale = randomBetween(SETTINGS.scale.oak.trunk.min, SETTINGS.scale.oak.trunk.max);
