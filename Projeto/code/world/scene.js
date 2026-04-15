@@ -55,7 +55,47 @@ function createGround() {
     });
     
     // Criar o plano do chão (30x30 para ser suficientemente grande)
-    const groundGeometry = new THREE.PlaneGeometry(30, 30);
+    const groundGeometry = new THREE.PlaneGeometry(30, 30, 64, 64);
+    
+    // ── Depressão para a zona da água (desde as cascatas para frente) ────────────
+    // Vale alongado que vai desde z=-4.5 (cascatas) até z=4.5 (para frente)
+    const valeCenterX =  3.4;   // média entre cascata1.x (0.5) e cascata2.x (5.5)
+    const valeStartZ  =  0.5;   // Z das cascatas (onde começa)
+    const valeEndZ    =  4.5;   // Z onde termina (espaço aberto para frente)
+    const valeWidthX  =  1.2;   // meia-largura do vale no eixo X
+    const baseDepth   =  0.5;   // profundidade máxima (unidades)
+
+    const pos = groundGeometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+        const vx = pos.getX(i); // X do vértice
+        const vy = pos.getY(i); // Y aqui = Z do mundo (o plano vai ser rodado -90º)
+
+        // Distância em relação ao eixo X do vale
+        const dx = vx - valeCenterX;
+        
+        // Verificar se está dentro da extensão Z do vale
+        if (vy >= valeStartZ && vy <= valeEndZ) {
+            // Distância lateral (em X) — bordas suaves
+            const lateralDist = Math.abs(dx) / valeWidthX;
+            
+            if (lateralDist < 1.0) {
+                // Profundidade maior no centro do vale, zero nas bordas
+                const lateralFactor = 1.0 - lateralDist * lateralDist; // quadrático = borda suave
+                
+                // Profundidade ligeiramente maior perto das cascatas, decresce para frente
+                const distFromStart = Math.max(0, vy - valeStartZ);
+                const lengthFraction = distFromStart / (valeEndZ - valeStartZ);
+                const depthFactor = 1.0 - lengthFraction * 0.3; // mantém profundidade, mas decresce ligeiramente
+                
+                const depression = baseDepth * lateralFactor * depthFactor;
+                pos.setZ(i, -depression);
+            }
+        }
+    }
+    pos.needsUpdate = true;
+    groundGeometry.computeVertexNormals(); // recalcular normais para iluminação correta
+    // ───────────────────────────────────────────────────────────────────────────────
+    
     const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
     groundMesh.rotation.x = -Math.PI / 2;
     groundMesh.receiveShadow = true;
