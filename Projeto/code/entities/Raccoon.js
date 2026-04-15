@@ -38,6 +38,7 @@ const SETTINGS = {
     },
     terrified: {
         heightThreshold: 0.5,           // altura absoluta em que começa a ter medo
+        maxHeightThreshold: 1.0,        // altura máxima para poder saltar com medo (ex: tenda). Acima disto, paralisia total
         loopStartFrame: 30,             // Início
         loopEndFrame: 60,              // Cortar mais cedo para evitar abaixar-se (Fase 12 Final)
     },
@@ -467,9 +468,13 @@ class Raccoon {
      * @param {Object}  input
      */
     _handleJump(isRunning, isMoving, input) {
+        const isTerrified = (this.currentState === STATES.TERRIFIED || this.currentState === STATES.TERRIFIED_LOOP);
+        const isTooHighAndTerrified = isTerrified && this.model.position.y > SETTINGS.terrified.maxHeightThreshold;
+        
         const canJump =
             input.jump &&
             !this.wasJumping &&
+            !isTooHighAndTerrified &&  // Não salta se está com medo E acima da altura máxima
             ![STATES.JUMP, STATES.SITTING, STATES.SITTING_DOWN, STATES.STANDING_UP].includes(this.currentState);
 
         if (canJump) {
