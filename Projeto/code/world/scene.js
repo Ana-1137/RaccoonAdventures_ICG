@@ -83,7 +83,7 @@ function createGround() {
     // Configurar wrapping e repeat para o campfire
     [campfireColor, campfireNormal, campfireRoughness].forEach(texture => {
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(3, 3);
+        texture.repeat.set(10, 10);  // Padrão mais fino, proporcional ao tamanho do mesh
     });
     
     // Criar alphaMap circular programaticamente
@@ -94,7 +94,7 @@ function createGround() {
     
     const centerX = alphaMapCanvas.width / 2;
     const centerY = alphaMapCanvas.height / 2;
-    const maxRadius = alphaMapCanvas.width / 2;
+    const maxRadius = alphaMapCanvas.width / 4;  // Raio reduzido (era width / 2)
     
     // Preencher com gradiente circular (opaco no centro, transparente nas bordas)
     for (let y = 0; y < alphaMapCanvas.height; y++) {
@@ -125,10 +125,10 @@ function createGround() {
         side: THREE.DoubleSide,
     });
     
-    // Criar o plano do campfire (8x8, posicionado ligeiramente acima para evitar z-fighting)
+    // Criar o plano do campfire (3x3, posicionado no centro e ligeiramente acima para evitar z-fighting)
     const campfireGeometry = new THREE.PlaneGeometry(3, 3);
     const campfireMesh = new THREE.Mesh(campfireGeometry, campfireMaterial);
-    campfireMesh.position.y = 0.001; // Ligeiramente acima do chão
+    campfireMesh.position.set(0, 0.001, 0);  // Centro da cena, ligeiramente acima
     campfireMesh.rotation.x = -Math.PI / 2;
     campfireMesh.receiveShadow = true;
     

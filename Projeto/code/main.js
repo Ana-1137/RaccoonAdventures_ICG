@@ -15,7 +15,7 @@ createLights(scene);
 
 // Câmara e Renderer
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
-camera.position.set(0, 5, 10);
+camera.position.set(0, 1.5, 2.5);  // Bem mais perto do raccoon
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
