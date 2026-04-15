@@ -19,8 +19,8 @@ const SETTINGS = {
     // Zona de exclusão para as árvores (calculada baseada nas posições)
     exclusionZone: {
         type: 'rect',
-        halfW: 3.5,  // 7 unidades de largura
-        halfD: 3.5,  // 7 unidades de profundidade
+        halfW: 4.5,  // 7 unidades de largura
+        halfD: 4.5,  // 7 unidades de profundidade
     },
     
     // Posição da água (entre as cascatas)
@@ -77,6 +77,8 @@ function loadWaterfallModel(loader, file, config) {
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
+                        // Ativar raycast para deteção de colisões (ex: edges para medo)
+                        child.raycast = THREE.Mesh.prototype.raycast.bind(child);
                     }
                 });
                 

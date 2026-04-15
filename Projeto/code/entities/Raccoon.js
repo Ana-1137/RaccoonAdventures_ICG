@@ -18,8 +18,8 @@ const SETTINGS = {
         rayHeight: 0.6,   // raio para baixo a partir dos pés
         ceilingCheckHeight: 0.5, // teto
         maxStepHeight: 0.15, // degraus
-        ledgeDepth: 0.8,  // profundidade reduzida para ativar medo mais frequentemente
-        ledgeOffset: 0.1, // Margem bem mais curta (Fase 12 Final)
+        ledgeDepth: 0.8,  // aumentado - mais tolerante para detetar edges
+        ledgeOffset: 0.4, // aumentado MUITO - detetar a cascata MAIS CEDO (antes de bater)
         // ── Refinamento de Raycast (Fase 12 - Rampas) ──
         maxLandingDistance: -0.02, // distância máxima de caída permitida em rampas (negativo = para baixo)
         backfaceNormalThreshold: 0.1, // threshold da normal-Y para rejeitar backfaces (valores < isto = face de baixo)
@@ -37,7 +37,7 @@ const SETTINGS = {
         launchDelay: 0.15,             // Delay antes da aplicação do impulso (sincronização com prep frames)
     },
     terrified: {
-        heightThreshold: 0.6,            // altura absoluta em que começa a ter medo
+        heightThreshold: 0.2,            // altura MUITO baixa - qualquer altura ativa medo perto de edge
         maxHeightThreshold: 1.0,        // altura máxima para poder saltar com medo (ex: tenda). Acima disto, paralisia total
         loopStartFrame: 30,             // Início
         loopEndFrame: 60,              // Cortar mais cedo para evitar abaixar-se (Fase 12 Final)
@@ -837,7 +837,7 @@ class Raccoon {
             
             // DEBUG
             if (isMoving) {
-                console.log(`🔍 Ledge Detection: depth=${depth.toFixed(2)}, threshold=${threshold.toFixed(2)}, isAboveThreshold=${isAboveThreshold}, pos.y=${this.model.position.y.toFixed(2)}`);
+                console.log(`🔍 Ledge Detection: depth=${depth.toFixed(2)}, threshold=${threshold.toFixed(2)}, isAboveThreshold=${isAboveThreshold}, pos.y=${this.model.position.y.toFixed(2)}, state=${this.currentState}`);
             }
             
             if (depth > threshold) {
@@ -851,12 +851,12 @@ class Raccoon {
         // Se houver abismo E estiver muito alto, ativamos o medo
         // (precisa de ambas as condições: altura + edge à frente)
         if (scaryDepth && isAboveThreshold) {
-            if (this.currentState !== STATES.TERRIFIED) {
-                console.log(`😱 MEDO ATIVADO! scaryDepth=${scaryDepth}, isAboveThreshold=${isAboveThreshold}`);
+            if (this.currentState !== STATES.TERRIFIED && this.currentState !== STATES.TERRIFIED_LOOP) {
+                console.log(`😱 MEDO ATIVADO! scaryDepth=${scaryDepth}, isAboveThreshold=${isAboveThreshold}, state=${this.currentState}`);
                 this.currentState = STATES.TERRIFIED;
                 this.fadeToAction('terrified_loop', SETTINGS.blend.toTerrified);
             }
-        } else if (this.currentState === STATES.TERRIFIED) {
+        } else if (this.currentState === STATES.TERRIFIED || this.currentState === STATES.TERRIFIED_LOOP) {
             // Sai do medo se: não há abismo à frente OU desceu abaixo do threshold
             if (!scaryDepth || !isAboveThreshold) {
                 console.log(`😌 Saiu do medo. scaryDepth=${scaryDepth}, isAboveThreshold=${isAboveThreshold}`);
