@@ -1,6 +1,7 @@
 import { createGround } from './scene.js';
 import { spawnForest } from './Trees.js';
 import { loadTent } from '../entities/Tent.js';
+import { loadCampfire } from '../entities/Campfire.js';
 
 /**
  * Constrói o mundo carregando todos os elementos da cena em paralelo.
@@ -14,14 +15,14 @@ export async function buildWorld(scene, raccoon) {
     scene.add(groundMesh);
     scene.add(campfireMesh);
     
-    // Carregar floresta, tenda e outros elementos em paralelo
-    const [forest, tent] = await Promise.all([
+    // Carregar floresta, tenda e fogueira em paralelo
+    const [forest, tent, campfire] = await Promise.all([
         spawnForest(scene, raccoon),
         loadTent(scene),
+        loadCampfire(scene),
     ]);
     
     // TODO: Adicionar futuros elementos aqui
-    // loadCampfire(scene),
     // loadLogs(scene),
     // loadFires(scene),
     
@@ -30,5 +31,6 @@ export async function buildWorld(scene, raccoon) {
         campfireMesh,
         forest,
         tent,
+        campfire,
     };
 }

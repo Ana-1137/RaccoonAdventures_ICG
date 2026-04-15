@@ -107,6 +107,9 @@ class Raccoon {
 
         /** @type {THREE.Group|null} */
         this.model = null;
+        
+        // ── Posição inicial de spawn ──
+        this.spawnPosition = { x: 1, y: 0, z: 1 };
 
         /** @type {THREE.AnimationMixer|null} */
         this.mixer = null;
@@ -160,7 +163,7 @@ class Raccoon {
             this.model = fbx;
             this.model.name = 'guaxinim';
             this.model.scale.setScalar(SETTINGS.model.scale);
-            this.model.position.set(0, 0, 0);
+            this.model.position.set(this.spawnPosition.x, this.spawnPosition.y, this.spawnPosition.z);
 
             this.model.traverse((child) => {
                 if (child.isMesh) {
@@ -792,7 +795,7 @@ class Raccoon {
 
         // Segurança absoluta
         if (this.model.position.y < -50) {
-            this.model.position.set(0, 0, 0);
+            this.model.position.set(this.spawnPosition.x, this.spawnPosition.y, this.spawnPosition.z);
             this.verticalVelocity = 0;
             this.isGrounded = true;
         }
