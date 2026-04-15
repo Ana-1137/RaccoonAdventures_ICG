@@ -14,8 +14,8 @@ const SETTINGS = {
 
     // Água no vale (horizontal — segue a depressão)
     basin: {
-        position: { x: 3.0, y: -0.1, z: 0 },      // mais para baixo, dentro do vale
-        size:     { w: 4.5, h: 9.3 },              // apenas a largura do vale (0.9*2)
+        position: { x: 2.6, y: -0.1, z: 0 },      // mais para baixo, dentro do vale
+        size:     { w: 3.2, h: 9.3 },              // apenas a largura do vale (0.9*2)
         color:    0x3a7bd5,
         opacity:  0.80,
         segments: 32,                               // precisão da geometria
