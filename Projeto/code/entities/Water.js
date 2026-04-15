@@ -1,8 +1,6 @@
 import * as THREE from 'three';
-import { SETTINGS as GROUND_SETTINGS, applyValeDepressionToGeometry } from '../world/scene.js';
 
 // ─── CONFIGURAÇÃO CENTRAL ────────────────────────────────────────────────────
-// Todas as variáveis aqui para fácil ajuste visual e comportamental
 const SETTINGS = {
     // ┌─────────────────────────────────────────────────────────────────────────┐
     // │ ÁGUA NA CASCATA (VERTICAL)                                              │
@@ -17,58 +15,19 @@ const SETTINGS = {
     },
 
     // ┌─────────────────────────────────────────────────────────────────────────┐
-    // │ ÁGUA NO VALE (HORIZONTAL — COM SHADER CUSTOMIZADO)                      │
+    // │ ÁGUA NO VALE (HORIZONTAL — VERTEX DEFORMATION SUAVE)                    │
     // └─────────────────────────────────────────────────────────────────────────┘
     basin: {
         position: { x: 2.6, y: -0.1, z: 0 },      // Posição 3D
         size:     { w: 3.2, h: 9.3 },              // Dimensões (largura x comprimento)
-        color:    0x5ca3d4,                        // Cor da água (hex)
-        opacity:  0.6,                             // Transparência (0-1) — 0.6 = bem transparente
-        segments: 32,                              // Resolução da geometria
-        waveAmplitude: 0.01,                       // Amplitude das ondas (0-0.5)
-        waveFrequency: 0.7,                        // Frequência das ondas
-        waveSpeed: 0.8,                            // Velocidade da animação
+        color:    0x5ca3d4,                        // Cor da água
+        opacity:  0.6,                             // Transparência (0-1)
+        segments: 64,                              // Resolução (mais = mais realista)
+        waveAmplitude: 0.03,                        // Altura das ondas (0-1)
+        waveSpeed: 0.7,                            // Velocidade (0-2, mais baixo = mais calmo)
+        roughness: 0.2,                            // Material: superfície
+        metalness: 0.3,                            // Material: reflexo
     },
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Shader customizado para água com transparência e ondas
-// ─────────────────────────────────────────────────────────────────────────────
-
-const waveShader = {
-    uniforms: {
-        time: { value: 0 },
-        color: { value: new THREE.Color(SETTINGS.basin.color) },
-        opacity: { value: SETTINGS.basin.opacity },
-        amplitude: { value: SETTINGS.basin.waveAmplitude },
-        frequency: { value: SETTINGS.basin.waveFrequency },
-    },
-    vertexShader: `
-        uniform float time;
-        uniform float amplitude;
-        uniform float frequency;
-        
-        void main() {
-            vec3 pos = position;
-            
-            // Ondas em múltiplas direções para efeito natural
-            float wave1 = sin(pos.x * frequency + time * 2.0) * amplitude;
-            float wave2 = sin(pos.y * frequency * 0.7 + time * 1.5) * amplitude;
-            float wave3 = cos((pos.x + pos.y) * frequency * 0.5 + time) * amplitude * 0.7;
-            
-            pos.z += wave1 + wave2 + wave3;
-            
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-        }
-    `,
-    fragmentShader: `
-        uniform vec3 color;
-        uniform float opacity;
-        
-        void main() {
-            gl_FragColor = vec4(color, opacity);
-        }
-    `,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,11 +35,11 @@ const waveShader = {
 /**
  * Cria e adiciona duas águas à cena:
  * 1. Queda vertical na cascata
- * 2. Fluxo horizontal no vale (com shader customizado e ondas animadas)
+ * 2. Fluxo horizontal no vale (com vertex deformation ondulante)
  * @param {THREE.Scene} scene
- * @returns {Object} { waterfall, basin }
+ * @returns {Promise<Object>} { waterfall, basin }
  */
-export function createWater(scene) {
+export async function createWater(scene) {
     // ═══════════════════════════════════════════════════════════════════════════
     //  ÁGUA 1: CASCATA (VERTICAL)
     // ═══════════════════════════════════════════════════════════════════════════
@@ -108,12 +67,12 @@ export function createWater(scene) {
     );
     waterfall.rotation.y = 0;
     waterfall.receiveShadow = true;
-    waterfall.raycast = () => {}; // Ignorar raycasts
+    waterfall.raycast = () => {};
     
     scene.add(waterfall);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    //  ÁGUA 2: VALE (HORIZONTAL — COM SHADER TRANSPARENTE)
+    //  ÁGUA 2: VALE (HORIZONTAL — VERTEX DEFORMATION COM ONDAS SUAVES)
     // ═══════════════════════════════════════════════════════════════════════════
     
     const basinGeo = new THREE.PlaneGeometry(
@@ -123,19 +82,17 @@ export function createWater(scene) {
         SETTINGS.basin.segments
     );
 
-    // Criar shader material com transparência real
-    const basinMat = new THREE.ShaderMaterial({
-        uniforms: {
-            ...waveShader.uniforms,
-            color: { value: new THREE.Color(SETTINGS.basin.color) },
-            opacity: { value: SETTINGS.basin.opacity },
-        },
-        vertexShader: waveShader.vertexShader,
-        fragmentShader: waveShader.fragmentShader,
+    // Guardar posições originais para cálculo de ondas
+    const originalPositions = new Float32Array(basinGeo.attributes.position.array);
+
+    const basinMat = new THREE.MeshStandardMaterial({
+        color:       SETTINGS.basin.color,
         transparent: true,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-        wireframe: false,
+        opacity:     SETTINGS.basin.opacity,
+        roughness:   SETTINGS.basin.roughness,
+        metalness:   SETTINGS.basin.metalness,
+        side:        THREE.DoubleSide,
+        wireframe:   false,
     });
 
     const basin = new THREE.Mesh(basinGeo, basinMat);
@@ -147,8 +104,9 @@ export function createWater(scene) {
     basin.rotation.x = -Math.PI / 2;
     basin.raycast = () => {};
     
-    // Guardar referências para animação
-    basin.userData.shaderMaterial = basinMat;
+    // Guardar dados para animação
+    basin.userData.originalPositions = originalPositions;
+    basin.userData.geometry = basinGeo;
     
     scene.add(basin);
 
@@ -156,18 +114,43 @@ export function createWater(scene) {
 }
 
 /**
- * Atualiza a animação da água (ondas)
- * Chamado no animation loop (requestAnimationFrame)
+ * Atualiza a animação da água com vertex deformation (ondas suaves)
+ * Similar à abordagem das aulas (06_04_Ex_Waves.html): deforma vértices em tempo real
  * @param {THREE.Mesh} basinMesh - Mesh da água horizontal
  * @param {number} deltaTime - Tempo decorrido desde o último frame
  */
+let waterTime = 0;
+
 export function updateWater(basinMesh, deltaTime = 0.016) {
-    if (basinMesh && basinMesh.userData.shaderMaterial) {
-        const mat = basinMesh.userData.shaderMaterial;
-        if (mat.uniforms.time) {
-            mat.uniforms.time.value += deltaTime * SETTINGS.basin.waveSpeed;
-        }
+    if (!basinMesh || !basinMesh.userData.originalPositions) return;
+    
+    waterTime += deltaTime * SETTINGS.basin.waveSpeed;
+
+    const geometry = basinMesh.userData.geometry;
+    const positionAttribute = geometry.attributes.position;
+    const originalPositions = basinMesh.userData.originalPositions;
+
+    // ── VERTEX DEFORMATION: Calcular novas posições Z com ondas ──
+    for (let i = 0; i < positionAttribute.count; i++) {
+        // Obter posição original (X e Y no plano)
+        const x = originalPositions[i * 3];         // X original
+        const y = originalPositions[i * 3 + 1];     // Y original (será Z no mundo)
+
+        // Calcular deslocamento em Z (altura) com ondas suaves e calmas
+        // Combinar duas ondas para efeito mais natural
+        const wave1 = Math.sin(x * 0.5 + waterTime) * SETTINGS.basin.waveAmplitude;
+        const wave2 = Math.cos(y * 0.3 + waterTime * 0.7) * SETTINGS.basin.waveAmplitude * 0.7;
+        const newZ = wave1 + wave2;
+
+        // Atualizar posição do vértice
+        positionAttribute.setXYZ(i, x, y, newZ);
     }
+
+    // CRÍTICO: Informar ao Three.js que as posições mudaram
+    positionAttribute.needsUpdate = true;
+
+    // Recalcular normais para iluminação correta na superfície ondulante
+    geometry.computeVertexNormals();
 }
 
 export { SETTINGS as waterSettings };

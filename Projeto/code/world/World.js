@@ -19,18 +19,16 @@ export async function buildWorld(scene, raccoon) {
     scene.add(groundMesh);
     scene.add(campfireMesh);
     
-    // Carregar floresta, tenda, fogueira, logs e cascatas em paralelo
+    // Carregar floresta, tenda, fogueira, logs, cascatas e água em paralelo
     // A floresta recebe a zona de exclusão das cascatas para evitar árvores no mesmo local
-    const [forest, tent, campfire, logBenches, waterfalls] = await Promise.all([
+    const [forest, tent, campfire, logBenches, waterfalls, { waterfall, basin }] = await Promise.all([
         spawnForest(scene, raccoon, { exclusionZones: [WATERFALLS_SETTINGS.exclusionZone] }),
         loadTent(scene),
         loadCampfire(scene),
         loadLogBenches(scene),
         loadWaterfalls(scene),
+        createWater(scene),
     ]);
-    
-    // Criar a água (cascata + vale)
-    const { waterfall, basin } = createWater(scene);
     
     return {
         groundMesh,
