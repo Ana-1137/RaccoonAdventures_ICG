@@ -64,7 +64,7 @@ export function createWater(scene) {
     scene.add(waterfall);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    //  ÁGUA 2: VALE (HORIZONTAL — SEGUE A DEPRESSÃO)
+    //  ÁGUA 2: VALE (HORIZONTAL — RETÂNGULO RETO)
     // ═══════════════════════════════════════════════════════════════════════════
     
     const basinGeo = new THREE.PlaneGeometry(
@@ -73,9 +73,6 @@ export function createWater(scene) {
         SETTINGS.basin.segments,
         SETTINGS.basin.segments
     );
-
-    // APLICAR A MESMA DEPRESSÃO DO VALE
-    applyValeDepressionToGeometry(basinGeo, GROUND_SETTINGS.vale);
 
     const basinMat = new THREE.MeshStandardMaterial({
         color:       SETTINGS.basin.color,
