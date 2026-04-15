@@ -37,6 +37,7 @@ const SETTINGS = {
         launchDelay: 0.15,             // Delay antes da aplicação do impulso (sincronização com prep frames)
     },
     terrified: {
+        heightThreshold: 0.5,           // altura absoluta em que começa a ter medo
         loopStartFrame: 30,             // Início
         loopEndFrame: 60,              // Cortar mais cedo para evitar abaixar-se (Fase 12 Final)
     },
@@ -824,6 +825,7 @@ class Raccoon {
         const intersects = this.raycaster.intersectObjects(collidables, true);
 
         let scaryDepth = false;
+        const isAboveThreshold = this.model.position.y > SETTINGS.terrified.heightThreshold;
         if (intersects.length > 0) {
             const depth = this.model.position.y - intersects[0].point.y;
             // Buffer de estabilidade: se já estivermos com medo, aceitamos uma profundidade menor
@@ -835,8 +837,8 @@ class Raccoon {
             scaryDepth = true; // Precipício total
         }
 
-        // Se houver abismo, ativamos o medo
-        if (scaryDepth) {
+        // Se houver abismo OU se estiver muito alto, ativamos o medo
+        if (scaryDepth || isAboveThreshold) {
             if (this.currentState !== STATES.TERRIFIED) {
                 this.currentState = STATES.TERRIFIED;
                 this.fadeToAction('terrified_loop', SETTINGS.blend.toTerrified);
