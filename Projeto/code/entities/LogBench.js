@@ -5,13 +5,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const SETTINGS = {
     model: {
         file: '../elements/Log_Bench.glb',
-        scale: 1.0,
+        scale: 0.3,  // Reduzido de 1.0
     },
     placement: {
         positions: [
-            { x: 0, z: -1.2, rotation: 0 },           // Frente
-            { x: 1.0, z: 0.6, rotation: Math.PI * 0.5 },      // Direita
-            { x: -1.0, z: 0.6, rotation: Math.PI * 1.5 },     // Esquerda
+            { x: 0, y: 0.06, z: 0.7, rotation: 0 },           // Atrás da fogueira
+            { x: 0.6, y: 0.06, z: -0.1, rotation: Math.PI * 0.6 },      // Direita - perto da tenda
+            { x: -0.6, y: 0.06, z: -0.1, rotation: Math.PI * 1.4 },     // Esquerda - perto da tenda
         ],
     },
 };
@@ -34,7 +34,11 @@ function loadLogBenches(scene) {
                     const log = gltf.scene;
                     
                     // Aplicar transformações
-                    log.position.set(posConfig.x, 0, posConfig.z);
+                    log.position.set(
+                        posConfig.x,
+                        posConfig.y || 0,  // Usar y do config se existir, senão 0
+                        posConfig.z
+                    );
                     log.scale.set(
                         SETTINGS.model.scale,
                         SETTINGS.model.scale,
