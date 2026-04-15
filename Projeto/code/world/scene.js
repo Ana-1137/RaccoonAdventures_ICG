@@ -34,12 +34,13 @@ const SETTINGS = {
     // ┌─────────────────────────────────────────────────────────────────────────┐
     // │ VALE COM CURVA (depressão no terreno)                                  │
     // │ Estrutura: Zona1 (reto) → Zona2 (curva) → Zona3 (reto desviado)        │
+    // │ Direção: Cascatas (Z = -4.5) → Frente (Z = +4.5) seguindo a curva      │
     // └─────────────────────────────────────────────────────────────────────────┘
     vale: {
         // Posições das cascatas (origem do vale)
-        cascataX1: 0.5,
+        cascataX1: -1.5,
         cascataX2: 5.5,
-        cascataZ: -4.5,
+        cascataZ: -5.5,
 
         // ── ZONA 1: Reto nas cascatas ──
         zone1: {
@@ -50,17 +51,17 @@ const SETTINGS = {
         // ── ZONA 2: Curva de transição ──
         zone2: {
             start: -3.0,        // Onde inicia a curva
-            end: -1.0,          // Onde termina a curva
+            end: 1.0,           // Onde termina a curva
         },
 
         // ── ZONA 3: Reto desviado para a floresta ──
         zone3: {
-            start: -1.0,        // Onde inicia o reto desviado
-            end: 1.5,           // Onde termina o vale (fim total)
+            start: 1.0,         // Onde inicia o reto desviado
+            end: 4.5,           // Onde termina o vale (fim total para frente)
         },
 
         // ── Dimensões e forma ──
-        width: 1.2,             // meia-largura do vale (raio)
+        width: 0.9,             // meia-largura do vale (raio)
         depth: 0.5,             // profundidade máxima da depressão
         shiftX: 1.2,            // desvio em X (positivo = direita/floresta)
         depthFalloff: 0.3,      // quanto decresce a profundidade hacia o fim (0 a 1)
@@ -75,6 +76,7 @@ SETTINGS.vale.centerX = (SETTINGS.vale.cascataX1 + SETTINGS.vale.cascataX2) / 2;
 /**
  * Calcula o desvio em X para uma posição Z ao longo do vale.
  * Implementa transição suave: reto → curva (senoide) → reto desviado
+ * Vale corre das cascatas (Z = -4.5) para frente (Z = +4.5)
  * @param {number} z - Posição Z no mundo
  * @param {Object} valeSettings - SETTINGS.vale
  * @returns {number} Posição X do centro do vale nesta posição Z
@@ -105,6 +107,7 @@ function getValeCenterXAtZ(z, valeSettings) {
 /**
  * Aplica a depressão do vale ao geometria do chão.
  * Modifica os vértices do PlaneGeometry para criar uma bacia alongada.
+ * Vale corre das cascatas (Z = -4.5) para frente (Z = +4.5)
  * @param {THREE.PlaneGeometry} geometry - Geometria do chão
  * @param {Object} valeSettings - SETTINGS.vale
  */
@@ -116,7 +119,7 @@ function applyValeDepressionToGeometry(geometry, valeSettings) {
         const vx = pos.getX(i); // X do vértice (permanece igual)
         const vy = pos.getY(i); // Y aqui = Z do mundo (antes da rotação -90º)
 
-        // Verificar se está dentro da extensão Z do vale
+        // Verificar se está dentro da extensão Z do vale (das cascatas para frente)
         if (vy >= zone1.start && vy <= zone3.end) {
             const valeCenterX = getValeCenterXAtZ(vy, valeSettings);
 
