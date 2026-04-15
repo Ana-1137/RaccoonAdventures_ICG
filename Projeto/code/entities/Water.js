@@ -107,6 +107,7 @@ export async function createWater(scene) {
     // Guardar dados para animação
     basin.userData.originalPositions = originalPositions;
     basin.userData.geometry = basinGeo;
+    basin.userData.time = 0;  // Inicializar time no userData do mesh
     
     scene.add(basin);
 
@@ -119,16 +120,16 @@ export async function createWater(scene) {
  * @param {THREE.Mesh} basinMesh - Mesh da água horizontal
  * @param {number} deltaTime - Tempo decorrido desde o último frame
  */
-let waterTime = 0;
-
 export function updateWater(basinMesh, deltaTime = 0.016) {
-    if (!basinMesh || !basinMesh.userData.originalPositions) return;
+    if (!basinMesh || !basinMesh.userData.originalPositions || !basinMesh.userData.geometry) return;
     
-    waterTime += deltaTime * SETTINGS.basin.waveSpeed;
+    // Atualizar tempo armazenado no userData do mesh
+    basinMesh.userData.time += deltaTime * SETTINGS.basin.waveSpeed;
 
     const geometry = basinMesh.userData.geometry;
     const positionAttribute = geometry.attributes.position;
     const originalPositions = basinMesh.userData.originalPositions;
+    const waterTime = basinMesh.userData.time;
 
     // ── VERTEX DEFORMATION: Calcular novas posições Z com ondas ──
     for (let i = 0; i < positionAttribute.count; i++) {
