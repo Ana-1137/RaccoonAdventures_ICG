@@ -28,6 +28,17 @@ const SETTINGS = {
         roughness: 0.2,                            // Material: superfície
         metalness: 0.3,                            // Material: reflexo
     },
+
+    // ┌─────────────────────────────────────────────────────────────────────────┐
+    // │ ZONA DE EXCLUSÃO PARA ÁRVORES (VALE)                                    │
+    // └─────────────────────────────────────────────────────────────────────────┘
+    valeExclusionZone: {
+        type: 'rect',
+        x: 2.6,          // Centro X do vale
+        z: 0,            // Centro Z do vale
+        halfW: 2.0,      // Meia-largura (vale tem ~3.2 de largura)
+        halfD: 5.0,      // Meia-profundidade (vale tem ~9.3 de comprimento)
+    },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,10 +137,8 @@ export function updateWater(basinMesh, deltaTime = 0.016) {
     // Atualizar tempo armazenado no userData do mesh
     basinMesh.userData.time += deltaTime * SETTINGS.basin.waveSpeed;
 
-    const geometry = basinMesh.userData.geometry;
+    const { geometry, originalPositions, time: waterTime } = basinMesh.userData;
     const positionAttribute = geometry.attributes.position;
-    const originalPositions = basinMesh.userData.originalPositions;
-    const waterTime = basinMesh.userData.time;
 
     // ── VERTEX DEFORMATION: Calcular novas posições Z com ondas ──
     for (let i = 0; i < positionAttribute.count; i++) {
@@ -154,4 +163,4 @@ export function updateWater(basinMesh, deltaTime = 0.016) {
     geometry.computeVertexNormals();
 }
 
-export { SETTINGS as waterSettings };
+export { SETTINGS as WATER_SETTINGS };
