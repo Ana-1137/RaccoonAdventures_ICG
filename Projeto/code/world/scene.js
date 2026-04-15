@@ -302,4 +302,4 @@ function createGround() {
     return { groundMesh, campfireMesh };
 }
 
-export { createScene, createGround, SETTINGS };
+export { createScene, createGround, SETTINGS, applyValeDepressionToGeometry };

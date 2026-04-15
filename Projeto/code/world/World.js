@@ -5,6 +5,7 @@ import { loadTent } from '../entities/Tent.js';
 import { loadCampfire } from '../entities/Campfire.js';
 import { loadLogBenches } from '../entities/LogBench.js';
 import { loadWaterfalls, SETTINGS as WATERFALLS_SETTINGS } from '../entities/Waterfalls.js';
+import { createWater } from '../entities/Water.js';
 
 /**
  * Constrói o mundo carregando todos os elementos da cena em paralelo.
@@ -28,8 +29,8 @@ export async function buildWorld(scene, raccoon) {
         loadWaterfalls(scene),
     ]);
     
-    // TODO: Adicionar futuros elementos aqui
-    // loadWater(scene), // Sistema de água/partículas entre as cascatas
+    // Criar a água (cascata + vale)
+    const { waterfall, basin } = createWater(scene);
     
     return {
         groundMesh,
@@ -39,5 +40,7 @@ export async function buildWorld(scene, raccoon) {
         campfire,
         logBenches,
         waterfalls,
+        waterfall,
+        basin,
     };
 }
