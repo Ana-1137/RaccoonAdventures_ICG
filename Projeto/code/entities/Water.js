@@ -14,8 +14,8 @@ const SETTINGS = {
 
     // Água no vale (horizontal — segue a depressão)
     basin: {
-        position: { x: 2.3, y: 0.01, z: 0 },       // centrada no vale (com desvio)
-        size:     { w: 3.0, h: 9.0 },              // apenas a largura e comprimento do vale
+        position: { x: 3.0, y: -0.1, z: 0 },      // mais para baixo, dentro do vale
+        size:     { w: 4.5, h: 9.3 },              // apenas a largura do vale (0.9*2)
         color:    0x3a7bd5,
         opacity:  0.80,
         segments: 32,                               // precisão da geometria
@@ -84,6 +84,7 @@ export function createWater(scene) {
         roughness:   0.05,     // mais liso para reflexo
         metalness:   0.2,
         side:        THREE.DoubleSide,
+        depthWrite:  false,
     });
 
     const basin = new THREE.Mesh(basinGeo, basinMat);

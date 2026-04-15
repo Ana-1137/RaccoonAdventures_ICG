@@ -6,13 +6,13 @@ const SETTINGS = {
     cascata1: {
         file: '../elements/cascata1.glb',
         scale: 2.0,
-        position: { x: 0.5, y: 1.99, z: -4.5 },
+        position: { x: 0.7, y: 1.99, z: -4.5 },
         rotation: 0,
     },
     cascata2: {
         file: '../elements/cascata2.glb',
         scale: 2.0,
-        position: { x: 5.5, y: 1.99, z: -4.5 },
+        position: { x: 4.9, y: 1.99, z: -4.5 },
         rotation: 0,
     },
     
