@@ -37,8 +37,8 @@ const SETTINGS = {
         launchDelay: 0.15,             // Delay antes da aplicação do impulso (sincronização com prep frames)
     },
     terrified: {
-        heightThreshold: 1.5,           // altura absoluta em que começa a ter medo
-        maxHeightThreshold: 4.0,        // altura máxima para poder saltar com medo (ex: tenda). Acima disto, paralisia total
+        heightThreshold: 0.6,           // altura absoluta em que começa a ter medo
+        maxHeightThreshold: 2.0,        // altura máxima para poder saltar com medo (ex: tenda). Acima disto, paralisia total
         loopStartFrame: 30,             // Início
         loopEndFrame: 60,              // Cortar mais cedo para evitar abaixar-se (Fase 12 Final)
     },
