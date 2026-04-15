@@ -37,8 +37,8 @@ const SETTINGS = {
         launchDelay: 0.15,             // Delay antes da aplicação do impulso (sincronização com prep frames)
     },
     terrified: {
-        heightThreshold: 0.6,           // altura absoluta em que começa a ter medo
-        maxHeightThreshold: 2.0,        // altura máxima para poder saltar com medo (ex: tenda). Acima disto, paralisia total
+        heightThreshold: 0.5,           // altura absoluta em que começa a ter medo
+        maxHeightThreshold: 1.0,        // altura máxima para poder saltar com medo (ex: tenda). Acima disto, paralisia total
         loopStartFrame: 30,             // Início
         loopEndFrame: 60,              // Cortar mais cedo para evitar abaixar-se (Fase 12 Final)
     },
@@ -111,7 +111,7 @@ class Raccoon {
         this.model = null;
         
         // ── Posição inicial de spawn ──
-        this.spawnPosition = { x: 0, y: 5.5, z: 0 };  // Em cima do cilindro de teste
+        this.spawnPosition = { x: 1, y: 0, z: 1 };
 
         /** @type {THREE.AnimationMixer|null} */
         this.mixer = null;
