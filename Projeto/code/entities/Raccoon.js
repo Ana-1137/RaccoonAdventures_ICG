@@ -37,8 +37,8 @@ const SETTINGS = {
         launchDelay: 0.15,             // Delay antes da aplicação do impulso (sincronização com prep frames)
     },
     terrified: {
-        heightThreshold: 0.5,           // altura absoluta em que começa a ter medo
-        maxHeightThreshold: 1.0,        // altura máxima para poder saltar com medo (ex: tenda). Acima disto, paralisia total
+        heightThreshold: 1.5,           // altura absoluta em que começa a ter medo
+        maxHeightThreshold: 4.0,        // altura máxima para poder saltar com medo (ex: tenda). Acima disto, paralisia total
         loopStartFrame: 30,             // Início
         loopEndFrame: 60,              // Cortar mais cedo para evitar abaixar-se (Fase 12 Final)
     },
@@ -111,7 +111,7 @@ class Raccoon {
         this.model = null;
         
         // ── Posição inicial de spawn ──
-        this.spawnPosition = { x: 1, y: 0, z: 1 };
+        this.spawnPosition = { x: 0, y: 5.5, z: 0 };  // Em cima do cilindro de teste
 
         /** @type {THREE.AnimationMixer|null} */
         this.mixer = null;
@@ -842,16 +842,16 @@ class Raccoon {
             scaryDepth = true; // Precipício total
         }
 
-        // Se houver abismo OU se estiver muito alto, ativamos o medo
-        if (scaryDepth || isAboveThreshold) {
+        // Se houver abismo E estiver muito alto, ativamos o medo
+        // (precisa de ambas as condições: altura + edge à frente)
+        if (scaryDepth && isAboveThreshold) {
             if (this.currentState !== STATES.TERRIFIED) {
                 this.currentState = STATES.TERRIFIED;
                 this.fadeToAction('terrified_loop', SETTINGS.blend.toTerrified);
             }
         } else if (this.currentState === STATES.TERRIFIED) {
-            // Só sai do medo se o chão à frente voltar a ser seguro (estabilização)
-            // Se o usuário estiver parado, mantemos o medo um pouco mais para evitar flickering
-            if (isMoving || !scaryDepth) {
+            // Sai do medo se: não há abismo à frente OU desceu abaixo do threshold
+            if (!scaryDepth || !isAboveThreshold) {
                 this.currentState = STATES.IDLE;
                 this.fadeToAction('idle', SETTINGS.blend.toIdle);
             }
