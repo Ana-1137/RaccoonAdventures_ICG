@@ -30,8 +30,8 @@ const SETTINGS = {
     },
     jump: {
         standForward: 0,                // velocidade horizontal no salto parado
-        walkForward: 7 * 0.1,         // velocidade horizontal no salto a andar
-        runForward: 16 * 0.1,         // velocidade horizontal no salto a correr
+        walkForward: 3.5 * 0.1,         // velocidade horizontal no salto a andar
+        runForward: 8 * 0.1,         // velocidade horizontal no salto a correr
         walkStartFrame: 15,            // frame inicial do sub-clip do jump a andar
         walkEndTrimFrames: 15,          // frames a cortar no final (termina antes da pose estática)
         launchDelay: 0.15,             // Delay antes da aplicação do impulso (sincronização com prep frames)
