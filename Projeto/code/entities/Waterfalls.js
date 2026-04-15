@@ -20,7 +20,7 @@ const SETTINGS = {
     exclusionZone: {
         type: 'rect',
         halfW: 4.5,  // 7 unidades de largura
-        halfD: 4.5,  // 7 unidades de profundidade
+        halfD: 2.5,  // 7 unidades de profundidade
     },
     
     // Posição da água (entre as cascatas)

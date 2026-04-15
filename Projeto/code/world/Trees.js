@@ -29,6 +29,8 @@ const SETTINGS = {
         totalTrees: 180,            // Número total de árvores a spawnar
         evergreenPercent: 0.6,     // Percentagem de pinheiros (0-1)
         oakPercent: 0.4,           // Percentagem de carvalhos (0-1)
+        centerX: 0,                // Offset X do centro do círculo de spawn
+        centerZ: 0,                // Offset Z do centro do círculo de spawn
         innerRadius: 3,            // Raio da zona reservada central (fogueira, tenda) — sem árvores
         outerRadius: 8,           // Raio máximo de spawn — floresta densa entre inner e outer
         minDistanceApart: 0.6,     // Distância mínima entre árvores
@@ -168,15 +170,15 @@ function createInstancedMesh(meshData, count) {
  * @returns {THREE.Vector3|null} Nova posição se possível, null se limite atingido
  */
 function getRandomSpawnPosition(existingPositions, exclusionZones = []) {
-    const { innerRadius, outerRadius, minDistanceApart, groundY } = SETTINGS.spawn;
+    const { innerRadius, outerRadius, minDistanceApart, groundY, centerX, centerZ } = SETTINGS.spawn;
     const maxAttempts = 50;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        // Spawn uniforme no anel entre os dois raios
+        // Spawn uniforme no anel entre os dois raios, com offset do centro
         const angle = Math.random() * Math.PI * 2;
         const radius = innerRadius + Math.random() * (outerRadius - innerRadius);
-        const x = Math.cos(angle) * radius;
-        const z = Math.sin(angle) * radius;
+        const x = Math.cos(angle) * radius + centerX;
+        const z = Math.sin(angle) * radius + centerZ;
 
         const newPos = new THREE.Vector3(x, groundY, z);
 
