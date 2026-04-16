@@ -163,12 +163,25 @@ raccoon.modelLoaded.then(async () => {
             campfire.light.color.setStyle(value);
         });
     
+    // ═════════════════════════════════════════════════════════════════════════
+    // Pasta: Performance
+    const performanceFolder = gui.addFolder('⚙️ Performance');
+    performanceFolder.open();
+    
+    const fpsDisplay = { fps: '0.0' };
+    performanceFolder
+        .add(fpsDisplay, 'fps')
+        .name('FPS')
+        .listen()
+        .disable();
+    
     const clock = new THREE.Clock();
 
     function animate() {
         requestAnimationFrame(animate);
 
         const delta = clock.getDelta();
+        fpsDisplay.fps = (1 / delta).toFixed(1); // FPS arredondado à primeira casa decimal
         const isMoving = keyStates.w || keyStates.s || keyStates.a || keyStates.d;
         const isRunning = isMoving && keyStates.shift;
 
