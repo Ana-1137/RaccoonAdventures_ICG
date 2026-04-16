@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import GUI from 'lil-gui';
-import { createScene } from './world/scene.js';
-import { createLights, createCampfireLight } from './world/lights.js';
-import { createClimate } from './world/Climate.js';
-import { buildWorld } from './world/World.js';
-import { Raccoon } from './entities/Raccoon.js';
-import { ThirdPersonCamera } from './controls/ThirdPersonCamera.js';
-import { keyStates } from './controls/KeyboardControls.js';
-import { update as updateTrees } from './world/Trees.js';
-import { updateWater } from './entities/Water.js';
+import { createScene } from './code/world/scene.js';
+import { createLights, createCampfireLight } from './code/world/lights.js';
+import { createClimate } from './code/world/Climate.js';
+import { buildWorld } from './code/world/World.js';
+import { Raccoon } from './code/entities/Raccoon.js';
+import { ThirdPersonCamera } from './code/controls/ThirdPersonCamera.js';
+import { keyStates } from './code/controls/KeyboardControls.js';
+import { update as updateTrees } from './code/world/Trees.js';
+import { updateWater } from './code/entities/Water.js';
 
 
 // Elementos principais da cena
