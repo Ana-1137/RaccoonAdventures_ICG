@@ -747,11 +747,6 @@ class Raccoon {
 
         this.raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
         const rawIntersects = this.raycaster.intersectObjects(collidables, true);
-        
-        // DEBUG: Ver o que está a ser raycasted
-        if (rawIntersects.length > 0) {
-            console.log(`🔍 Ground raycast hit: ${rawIntersects[0].object.name || rawIntersects[0].object.type}, distance: ${rawIntersects[0].distance.toFixed(2)}, userData:`, rawIntersects[0].object.userData);
-        }
 
         // ── Filtro sofisticado de hits do raycast ──────────────────────────────────
         const intersects = rawIntersects.filter(hit => {
