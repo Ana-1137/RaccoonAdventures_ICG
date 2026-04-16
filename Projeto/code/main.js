@@ -126,14 +126,6 @@ raccoon.modelLoaded.then(async () => {
     const lightingFolder = gui.addFolder('💡 Iluminação');
     lightingFolder.open();
     
-    lightingFolder
-        .add(directionalLight, 'intensity', 0, 2, 0.05)
-        .name('Intensidade Sol');
-    
-    // Submenu para luzes adicionais
-    const otherLightsFolder = lightingFolder.addFolder('🔥 Outras Luzes');
-    otherLightsFolder.open();
-    
     // ═════════════════════════════════════════════════════════════════════════
     // ─── CRIAR LUZ DE FOGUEIRA (MODULAR E OTIMIZADA) ──────────────────────────
     // ═════════════════════════════════════════════════════════════════════════
@@ -141,7 +133,7 @@ raccoon.modelLoaded.then(async () => {
     const campfire = createCampfireLight(scene);
     
     // Dashboard: Fogueira
-    otherLightsFolder
+    lightingFolder
         .add(campfire.settings, 'enabled')
         .name('Ativar Fogueira')
         .onChange((value) => {
@@ -149,14 +141,14 @@ raccoon.modelLoaded.then(async () => {
             campfire.mesh.visible = value;
         });
     
-    otherLightsFolder
+    lightingFolder
         .add(campfire.settings, 'intensity', 0, 2, 0.1)
         .name('Intensidade')
         .onChange((value) => {
             campfire.settings.intensity = value;
         });
     
-    otherLightsFolder
+    lightingFolder
         .add(campfire.settings, 'range', 5, 30, 1)
         .name('Alcance')
         .onChange((value) => {
@@ -164,7 +156,7 @@ raccoon.modelLoaded.then(async () => {
             campfire.settings.range = value;
         });
     
-    otherLightsFolder
+    lightingFolder
         .addColor(campfire.settings, 'color')
         .name('Cor')
         .onChange((value) => {
