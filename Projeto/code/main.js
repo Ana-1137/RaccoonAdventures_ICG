@@ -103,16 +103,14 @@ raccoon.modelLoaded.then(async () => {
     
     timeFolder
         .add(climate.settings.time, 'enabled')
-        .name('Ativar Ciclo')
-        .onChange((value) => climate.setTimeEnabled(value));
+        .name('Ativar Ciclo');
     
     timeFolder
-        .add(climate.settings.time, 'hour', 0, 24, 0.1)
-        .name('Hora do Dia')
-        .onChange((value) => climate.setHour(value));
+        .add(climate.settings.time, 'hour', 0, 24, 0.01)
+        .name('Hora do Dia');
     
     timeFolder
-        .add(climate.settings.time, 'speed', 0, 0.2, 0.01)
+        .add(climate.settings.time, 'speed', 0, 0.3, 0.01)
         .name('Velocidade');
     
     // Mostrar hora formatada (read-only)
@@ -123,34 +121,66 @@ raccoon.modelLoaded.then(async () => {
         .listen()
         .disable();
     
-    // Pasta: Iluminação
+    // ═════════════════════════════════════════════════════════════════════════
+    // Pasta: Controlo de Iluminação
     const lightingFolder = gui.addFolder('💡 Iluminação');
+    lightingFolder.open();
     
     lightingFolder
-        .add(directionalLight, 'intensity', 0, 2, 0.1)
+        .add(directionalLight, 'intensity', 0, 2, 0.05)
         .name('Intensidade Sol');
     
-    lightingFolder
-        .add(ambientLight, 'intensity', 0, 1, 0.1)
-        .name('Luz Ambiente');
+    // Submenu para futuras luzes (fogueira, etc.)
+    const otherLightsFolder = lightingFolder.addFolder('🔥 Outras Luzes');
+    otherLightsFolder.open();
     
-    // Atalhos para horas específicas (botões)
-    const presetsFolder = gui.addFolder('⚙️ Presets');
-    presetsFolder.open();
+    // ═════════════════════════════════════════════════════════════════════════
+    // ─── CRIAR LUZ DE FOGUEIRA ───────────────────────────────────────────────
+    // ═════════════════════════════════════════════════════════════════════════
     
-    const hoursPresets = {
-        'Amanhecer (6h)': () => climate.setHour(6),
-        'Manhã (9h)': () => climate.setHour(9),
-        'Meio-dia (12h)': () => climate.setHour(12),
-        'Tarde (15h)': () => climate.setHour(15),
-        'Pôr do Sol (18h)': () => climate.setHour(18),
-        'Noite (21h)': () => climate.setHour(21),
-        'Meia-noite (0h)': () => climate.setHour(0),
+    const campfireLight = new THREE.PointLight(0xff8c00, 1, 15); // Laranja, intensidade 1, alcance 15
+    campfireLight.position.set(2.6, 0.3, 0); // Posição do acampamento
+    campfireLight.castShadow = true;
+    campfireLight.shadow.mapSize.width = 1024;
+    campfireLight.shadow.mapSize.height = 1024;
+    scene.add(campfireLight);
+    
+    // Objeto para controlar propriedades da fogueira
+    const campfireSettings = {
+        enabled: true,
+        intensity: 1,
+        range: 15,
+        color: '#ff8c00',
     };
     
-    Object.entries(hoursPresets).forEach(([label, fn]) => {
-        presetsFolder.add({ preset: fn }, 'preset').name(label);
-    });
+    // Dashboard: Fogueira
+    otherLightsFolder
+        .add(campfireSettings, 'enabled')
+        .name('Ativar Fogueira')
+        .onChange((value) => {
+            campfireLight.visible = value;
+        });
+    
+    otherLightsFolder
+        .add(campfireSettings, 'intensity', 0, 2, 0.1)
+        .name('Intensidade')
+        .onChange((value) => {
+            campfireLight.intensity = value;
+        });
+    
+    otherLightsFolder
+        .add(campfireSettings, 'range', 5, 30, 1)
+        .name('Alcance')
+        .onChange((value) => {
+            campfireLight.distance = value;
+        });
+    
+    otherLightsFolder
+        .addColor(campfireSettings, 'color')
+        .name('Cor')
+        .onChange((value) => {
+            campfireLight.color.setStyle(value);
+        });
     
     const clock = new THREE.Clock();
 
@@ -164,6 +194,17 @@ raccoon.modelLoaded.then(async () => {
         // ─── Atualizar Sistema de Clima ───
         climate.update(delta);
         timeDisplay.time = climate.getTimeFormatted(); // Atualizar display de hora
+        
+        // ─── Atualizar Animação de Fogueira (Flicker Realista) ───
+        if (campfireSettings.enabled) {
+            // Tremeluzir realista: variação suave com ruído Perlin-like
+            const flickerTime = Date.now() * 0.001; // Converter ms para segundos
+            const flicker = Math.sin(flickerTime * 2) * 0.3 + 
+                          Math.sin(flickerTime * 4.7) * 0.2 + 
+                          Math.sin(flickerTime * 8.3) * 0.1;
+            const flickeredIntensity = campfireSettings.intensity * (0.7 + flicker);
+            campfireLight.intensity = Math.max(0, flickeredIntensity);
+        }
         
         // Atualizar a lógica do guaxinim (animações e movimento)
         raccoon.update(delta, keyStates);

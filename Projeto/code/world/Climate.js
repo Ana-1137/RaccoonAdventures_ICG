@@ -9,7 +9,7 @@ import * as THREE from 'three';
 const SETTINGS = {
     time: {
         hour: 12,           // Hora atual (0-24)
-        speed: 0.02,        // Velocidade de passagem do tempo (horas por frame)
+        speed: 0.1,         // Velocidade de passagem do tempo (horas por frame) — MAIS RÁPIDO
         enabled: true,      // Ativar/desativar passagem automática de tempo
     },
     
@@ -19,6 +19,14 @@ const SETTINGS = {
             max: 1.5,       // Intensidade máxima (meio-dia)
         },
         distance: 50,       // Distância do sol em relação à cena
+        size: 2,            // Tamanho visual do círculo do sol
+        color: 0xfdb813,    // Cor amarelo-dourado
+    },
+    
+    moon: {
+        size: 1.5,          // Tamanho visual do círculo da lua
+        color: 0xe0e0e0,    // Cor branco-cinzento
+        opacity: 0.8,       // Transparência da lua
     },
     
     ambient: {
@@ -45,10 +53,38 @@ const SETTINGS = {
  * @returns {Object} Sistema de clima com métodos de controlo
  */
 export function createClimate(scene, sunLight, ambientLight) {
+    // ─── CRIAR SOL VISUAL ───────────────────────────────────────────────────
+    const sunGeometry = new THREE.CircleGeometry(SETTINGS.sun.size, 32);
+    const sunMaterial = new THREE.MeshBasicMaterial({
+        color: SETTINGS.sun.color,
+        // MeshBasicMaterial é auto-emissivo, não precisa dessas propriedades
+    });
+    const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+    sunMesh.castShadow = false;
+    sunMesh.receiveShadow = false;
+    scene.add(sunMesh);
+    
+    // ─── CRIAR LUA VISUAL ────────────────────────────────────────────────────
+    const moonGeometry = new THREE.CircleGeometry(SETTINGS.moon.size, 32);
+    const moonMaterial = new THREE.MeshBasicMaterial({
+        color: SETTINGS.moon.color,
+        transparent: true,
+        opacity: SETTINGS.moon.opacity,
+        // MeshBasicMaterial é auto-emissivo
+    });
+    const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+    moonMesh.castShadow = false;
+    moonMesh.receiveShadow = false;
+    scene.add(moonMesh);
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    
     const climate = {
         scene,
         sunLight,
         ambientLight,
+        sunMesh,
+        moonMesh,
         settings: SETTINGS,
         
         /**
@@ -68,53 +104,54 @@ export function createClimate(scene, sunLight, ambientLight) {
                 }
             }
             
-            // Atualizar posição do sol e iluminação
-            this.updateSunPosition();
+            // Atualizar posição do sol e lua
+            this.updateCelestialBodies();
+            
+            // Atualizar iluminação e céu
             this.updateLighting();
             this.updateSkyColor();
         },
         
         /**
-         * Calcula e atualiza a posição do sol baseado na hora do dia
-         * Simulação simplificada: sol nasce às 6h, apanha-se às 18h
+         * Calcula e atualiza a posição do sol e lua baseado na hora do dia
+         * Ambos circulam no céu em órbita contínua
          */
-        updateSunPosition() {
+        updateCelestialBodies() {
             const { hour } = SETTINGS.time;
             const { distance } = SETTINGS.sun;
             
-            // Calcular ângulo de elevação (Y) e azimute (X/Z)
-            // Nasce a leste (Z), apanha-se a oeste (Z negativo)
-            const sunriseHour = 6;
-            const sunsetHour = 18;
-            const dayDuration = sunsetHour - sunriseHour;
+            // Converter hora (0-24) para ângulo (0-2π)
+            // 0h está no leste, 12h no oeste (180°)
+            const dayProgress = (hour / 24) * Math.PI * 2;
             
-            let sunriseProgress = 0; // 0 a 1
+            // ── Sol ──
+            // Elevação: máxima ao meio-dia (12h), mais baixa em 6h e 18h
+            const sunElevation = Math.sin(dayProgress) * (Math.PI / 2.5);
+            const sunAzimuth = dayProgress - (Math.PI / 2);
             
-            if (hour >= sunriseHour && hour <= sunsetHour) {
-                // Durante o dia
-                sunriseProgress = (hour - sunriseHour) / dayDuration;
-            } else if (hour < sunriseHour) {
-                // Antes do amanhecer
-                sunriseProgress = (hour + 24 - sunriseHour) / dayDuration;
-            } else {
-                // Depois do pôr do sol
-                sunriseProgress = (hour - sunriseHour) / dayDuration;
-            }
+            const sunX = Math.cos(sunAzimuth) * Math.cos(sunElevation) * distance;
+            const sunY = Math.sin(sunElevation) * distance;
+            const sunZ = Math.sin(sunAzimuth) * Math.cos(sunElevation) * distance;
             
-            // Elevation: seno para uma curva natural (0° a 90° a 0°)
-            const elevationAngle = Math.sin(sunriseProgress * Math.PI) * (Math.PI / 2.5);
+            this.sunMesh.position.set(sunX, sunY, sunZ);
             
-            // Azimute: leste a oeste
-            const azimuthAngle = (sunriseProgress * Math.PI) - (Math.PI / 2);
+            // Para a câmara sempre ver o sol, ele fica sempre virado
+            this.sunMesh.lookAt(this.scene.position);
             
-            // Converter para posição 3D
-            const x = Math.cos(azimuthAngle) * Math.cos(elevationAngle) * distance;
-            const y = Math.sin(elevationAngle) * distance;
-            const z = Math.sin(azimuthAngle) * Math.cos(elevationAngle) * distance;
+            // ── Lua (180° de diferença) ──
+            const moonProgress = dayProgress + Math.PI; // Lua do lado oposto
+            const moonElevation = Math.sin(moonProgress) * (Math.PI / 2.5);
+            const moonAzimuth = moonProgress - (Math.PI / 2);
             
-            this.sunLight.position.set(x, y, z);
+            const moonX = Math.cos(moonAzimuth) * Math.cos(moonElevation) * distance;
+            const moonY = Math.sin(moonElevation) * distance;
+            const moonZ = Math.sin(moonAzimuth) * Math.cos(moonElevation) * distance;
             
-            // Atualizar alvo de sombra para acompanhar o sol
+            this.moonMesh.position.set(moonX, moonY, moonZ);
+            this.moonMesh.lookAt(this.scene.position);
+            
+            // Atualizar posição da luz direcional também (para sombras realistas)
+            this.sunLight.position.set(sunX, sunY, sunZ);
             const shadowCamera = this.sunLight.shadow.camera;
             shadowCamera.left = -30;
             shadowCamera.right = 30;
@@ -132,32 +169,21 @@ export function createClimate(scene, sunLight, ambientLight) {
             const { min: sunIntensityMin, max: sunIntensityMax } = SETTINGS.sun.intensity;
             const { min: ambientIntensityMin, max: ambientIntensityMax } = SETTINGS.ambient.intensity;
             
-            // Calcular intensidade: máximo ao meio-dia (12h), mínimo à noite (0h/24h)
-            let newSunIntensity = 0;
-            let newAmbientIntensity = 0;
+            // Converter hora para ângulo (0-24h → 0-2π)
+            const dayProgress = (hour / 24) * Math.PI * 2;
             
-            if (hour >= 6 && hour <= 18) {
-                // Durante o dia: curva suave de intensidade
-                const dayProgress = (hour - 6) / 12; // 0 a 1
-                
-                // Parabola: máximo ao meio-dia
-                const curveIntensity = Math.sin(dayProgress * Math.PI);
-                
-                newSunIntensity = sunIntensityMin + 
-                               (sunIntensityMax - sunIntensityMin) * curveIntensity;
-                newAmbientIntensity = ambientIntensityMin + 
-                                   (ambientIntensityMax - ambientIntensityMin) * curveIntensity;
-            } else {
-                // Noite
-                const nightHour = hour < 6 ? hour + 24 : hour;
-                const nightProgress = (nightHour - 18) / 12; // 0 a 1 durante 18h a 6h
-                
-                // Suave transição noite: 10% de intensidade base
-                const curveIntensity = Math.sin(nightProgress * Math.PI) * 0.1;
-                
-                newSunIntensity = sunIntensityMin * Math.max(0.1, curveIntensity);
-                newAmbientIntensity = ambientIntensityMin * 0.8;
-            }
+            // Elevação do sol: máxima ao meio-dia (sin(dayProgress) = 1 em 12h)
+            const sunElevation = Math.sin(dayProgress);
+            
+            // Intensidade baseada diretamente na elevação do sol (suave e contínua)
+            // 0 = elevação mínima (noite) → 1 = elevação máxima (meio-dia)
+            const elevationFactor = Math.max(0, sunElevation); // Clamp a 0 durante noite
+            
+            // Interpolação suave de intensidades
+            const newSunIntensity = sunIntensityMin + 
+                                   (sunIntensityMax - sunIntensityMin) * elevationFactor;
+            const newAmbientIntensity = ambientIntensityMin + 
+                                        (ambientIntensityMax - ambientIntensityMin) * elevationFactor;
             
             this.sunLight.intensity = newSunIntensity;
             this.ambientLight.intensity = newAmbientIntensity;
@@ -168,37 +194,37 @@ export function createClimate(scene, sunLight, ambientLight) {
          */
         updateSkyColor() {
             const { time: { hour }, sky } = SETTINGS;
-            let targetColor = sky.dayColor;
             
-            if (hour >= 6 && hour <= 8) {
-                // Amanhecer (6h-8h)
-                const progress = (hour - 6) / 2;
-                targetColor = new THREE.Color().lerpColors(
-                    sky.sunsetColor,
-                    sky.dayColor,
-                    progress
-                );
-            } else if (hour >= 8 && hour <= 18) {
-                // Dia
+            // Converter hora para ângulo (0-24h → 0-2π)
+            const dayProgress = (hour / 24) * Math.PI * 2;
+            
+            // Elevação do sol para determinar cor do céu
+            const sunElevation = Math.sin(dayProgress);
+            
+            let targetColor;
+            
+            // Transições suaves baseadas na elevação do sol
+            if (sunElevation > 0.3) {
+                // Dia: céu azul claro
                 targetColor = sky.dayColor;
-            } else if (hour >= 18 && hour <= 20) {
-                // Pôr do sol (18h-20h)
-                const progress = (hour - 18) / 2;
+            } else if (sunElevation > -0.1 && sunElevation <= 0.3) {
+                // Amanhecer/Entardecer: transição para cor de pôr do sol
+                const transitionFactor = (sunElevation + 0.1) / 0.4; // Normalizar entre 0-1
                 targetColor = new THREE.Color().lerpColors(
+                    sky.sunsetColor,
                     sky.dayColor,
-                    sky.sunsetColor,
-                    progress
+                    transitionFactor
                 );
-            } else if (hour >= 20 && hour <= 22) {
-                // Crepúsculo (20h-22h)
-                const progress = (hour - 20) / 2;
+            } else if (sunElevation > -0.3 && sunElevation <= -0.1) {
+                // Crepúsculo: transição para noite
+                const transitionFactor = (sunElevation + 0.3) / 0.2; // Normalizar entre 0-1
                 targetColor = new THREE.Color().lerpColors(
-                    sky.sunsetColor,
                     sky.nightColor,
-                    progress
+                    sky.sunsetColor,
+                    transitionFactor
                 );
             } else {
-                // Noite (22h-6h)
+                // Noite: céu azul escuro
                 targetColor = sky.nightColor;
             }
             
@@ -249,7 +275,7 @@ export function createClimate(scene, sunLight, ambientLight) {
     };
     
     // Atualizar uma primeira vez para sincronizar estado inicial
-    climate.updateSunPosition();
+    climate.updateCelestialBodies();
     climate.updateLighting();
     climate.updateSkyColor();
     
