@@ -154,7 +154,7 @@ function createInstancedMesh(meshData, count) {
     material.side = THREE.FrontSide;
     
     const instancedMesh = new THREE.InstancedMesh(geometry, material, count);
-    instancedMesh.castShadow = true;
+    instancedMesh.castShadow = false; // Desativar para performance (180 árvores é muito custoso)
     instancedMesh.receiveShadow = true;
     
     // Ativar frustum culling (deve estar ativo por defeito, mas confirmar)

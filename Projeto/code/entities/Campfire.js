@@ -41,7 +41,7 @@ function loadCampfire(scene) {
                 // Aplicar shadows a todas as meshes
                 campfire.traverse((child) => {
                     if (child.isMesh) {
-                        child.castShadow = true;
+                        child.castShadow = false; // Objeto estático, não precisa shadow
                         child.receiveShadow = true;
                     }
                 });

@@ -389,7 +389,7 @@ class Raccoon {
                     const wallCheckOrigin = this.model.position.clone();
                     wallCheckOrigin.y += SETTINGS.physics.wallCheckHeight;
                     
-                    const collidables = this.scene.children.filter(o => o !== this.model && o.type !== 'Light');
+                    const collidables = this.scene.children.filter(o => o !== this.model && o.type !== 'Light' && !o.userData?.isParticles && !o.userData?.isCampfire);
                     this.raycaster.set(wallCheckOrigin, forward);
                     const wallHits = this.raycaster.intersectObjects(collidables, true);
                     
@@ -542,7 +542,7 @@ class Raccoon {
                 .add(forward.multiplyScalar(speed + SETTINGS.physics.ledgeOffset));
             probeOrigin.y += 0.5;
 
-            const collidables = this.scene.children.filter(o => o !== this.model && o.type !== 'Light');
+            const collidables = this.scene.children.filter(o => o !== this.model && o.type !== 'Light' && !o.userData?.isParticles && !o.userData?.isCampfire);
             this.raycaster.set(probeOrigin, new THREE.Vector3(0, -1, 0));
             const hits = this.raycaster.intersectObjects(collidables, true);
 
@@ -585,7 +585,7 @@ class Raccoon {
                 .add(backward.multiplyScalar(speed + SETTINGS.physics.ledgeOffset));
             probeOrigin.y += 0.5;
 
-            const collidables = this.scene.children.filter(o => o !== this.model && o.type !== 'Light');
+            const collidables = this.scene.children.filter(o => o !== this.model && o.type !== 'Light' && !o.userData?.isParticles && !o.userData?.isCampfire);
             this.raycaster.set(probeOrigin, new THREE.Vector3(0, -1, 0));
             const hits = this.raycaster.intersectObjects(collidables, true);
 
@@ -722,7 +722,7 @@ class Raccoon {
 
         // Obter candidatos a chão/teto
         const collidables = this.scene.children.filter(obj =>
-            obj !== this.model && obj.type !== 'Light' && obj.type !== 'AmbientLight'
+            obj !== this.model && obj.type !== 'Light' && obj.type !== 'AmbientLight' && !obj.userData?.isParticles && !obj.userData?.isCampfire
         );
 
         // --- 1. DETEÇÃO DE TETO (Upward Raycast) ---
@@ -747,6 +747,11 @@ class Raccoon {
 
         this.raycaster.set(rayOrigin, new THREE.Vector3(0, -1, 0));
         const rawIntersects = this.raycaster.intersectObjects(collidables, true);
+        
+        // DEBUG: Ver o que está a ser raycasted
+        if (rawIntersects.length > 0) {
+            console.log(`🔍 Ground raycast hit: ${rawIntersects[0].object.name || rawIntersects[0].object.type}, distance: ${rawIntersects[0].distance.toFixed(2)}, userData:`, rawIntersects[0].object.userData);
+        }
 
         // ── Filtro sofisticado de hits do raycast ──────────────────────────────────
         const intersects = rawIntersects.filter(hit => {
@@ -824,7 +829,7 @@ class Raccoon {
         ledgeRayOrigin.add(forward.multiplyScalar(SETTINGS.physics.ledgeOffset));
         ledgeRayOrigin.y += 0.5;
 
-        const collidables = this.scene.children.filter(obj => obj !== this.model);
+        const collidables = this.scene.children.filter(obj => obj !== this.model && !obj.userData?.isParticles && !obj.userData?.isCampfire);
         this.raycaster.set(ledgeRayOrigin, new THREE.Vector3(0, -1, 0));
         const intersects = this.raycaster.intersectObjects(collidables, true);
 

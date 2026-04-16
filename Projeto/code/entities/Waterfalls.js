@@ -75,7 +75,7 @@ function loadWaterfallModel(loader, file, config) {
                 // Aplicar shadows a todas as meshes
                 cascade.traverse((child) => {
                     if (child.isMesh) {
-                        child.castShadow = true;
+                        child.castShadow = false; // Objeto estático
                         child.receiveShadow = true;
                         // Ativar raycast para deteção de colisões (ex: edges para medo)
                         child.raycast = THREE.Mesh.prototype.raycast.bind(child);

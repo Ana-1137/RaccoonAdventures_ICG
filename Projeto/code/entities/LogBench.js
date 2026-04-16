@@ -49,7 +49,8 @@ function loadLogBenches(scene) {
                     // Aplicar shadows a todas as meshes
                     log.traverse((child) => {
                         if (child.isMesh) {
-                            child.castShadow = true;
+                            // child.castShadow = false; // Objeto estático, sem necessidade
+                            child.castShadow = true; // Ativar para criar sombras no chão
                             child.receiveShadow = true;
                         }
                     });

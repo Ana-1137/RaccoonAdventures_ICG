@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import GUI from 'lil-gui';
 import { createScene } from './world/scene.js';
-import { createLights } from './world/lights.js';
+import { createLights, createCampfireLight } from './world/lights.js';
 import { createClimate } from './world/Climate.js';
 import { buildWorld } from './world/World.js';
 import { Raccoon } from './entities/Raccoon.js';
@@ -130,56 +130,45 @@ raccoon.modelLoaded.then(async () => {
         .add(directionalLight, 'intensity', 0, 2, 0.05)
         .name('Intensidade Sol');
     
-    // Submenu para futuras luzes (fogueira, etc.)
+    // Submenu para luzes adicionais
     const otherLightsFolder = lightingFolder.addFolder('🔥 Outras Luzes');
     otherLightsFolder.open();
     
     // ═════════════════════════════════════════════════════════════════════════
-    // ─── CRIAR LUZ DE FOGUEIRA ───────────────────────────────────────────────
+    // ─── CRIAR LUZ DE FOGUEIRA (MODULAR E OTIMIZADA) ──────────────────────────
     // ═════════════════════════════════════════════════════════════════════════
     
-    const campfireLight = new THREE.PointLight(0xff8c00, 1, 15); // Laranja, intensidade 1, alcance 15
-    campfireLight.position.set(2.6, 0.3, 0); // Posição do acampamento
-    campfireLight.castShadow = true;
-    campfireLight.shadow.mapSize.width = 1024;
-    campfireLight.shadow.mapSize.height = 1024;
-    scene.add(campfireLight);
-    
-    // Objeto para controlar propriedades da fogueira
-    const campfireSettings = {
-        enabled: true,
-        intensity: 1,
-        range: 15,
-        color: '#ff8c00',
-    };
+    const campfire = createCampfireLight(scene);
     
     // Dashboard: Fogueira
     otherLightsFolder
-        .add(campfireSettings, 'enabled')
+        .add(campfire.settings, 'enabled')
         .name('Ativar Fogueira')
         .onChange((value) => {
-            campfireLight.visible = value;
+            campfire.light.visible = value;
+            campfire.mesh.visible = value;
         });
     
     otherLightsFolder
-        .add(campfireSettings, 'intensity', 0, 2, 0.1)
+        .add(campfire.settings, 'intensity', 0, 2, 0.1)
         .name('Intensidade')
         .onChange((value) => {
-            campfireLight.intensity = value;
+            campfire.settings.intensity = value;
         });
     
     otherLightsFolder
-        .add(campfireSettings, 'range', 5, 30, 1)
+        .add(campfire.settings, 'range', 5, 30, 1)
         .name('Alcance')
         .onChange((value) => {
-            campfireLight.distance = value;
+            campfire.light.distance = value;
+            campfire.settings.range = value;
         });
     
     otherLightsFolder
-        .addColor(campfireSettings, 'color')
+        .addColor(campfire.settings, 'color')
         .name('Cor')
         .onChange((value) => {
-            campfireLight.color.setStyle(value);
+            campfire.light.color.setStyle(value);
         });
     
     const clock = new THREE.Clock();
@@ -195,16 +184,8 @@ raccoon.modelLoaded.then(async () => {
         climate.update(delta);
         timeDisplay.time = climate.getTimeFormatted(); // Atualizar display de hora
         
-        // ─── Atualizar Animação de Fogueira (Flicker Realista) ───
-        if (campfireSettings.enabled) {
-            // Tremeluzir realista: variação suave com ruído Perlin-like
-            const flickerTime = Date.now() * 0.001; // Converter ms para segundos
-            const flicker = Math.sin(flickerTime * 2) * 0.3 + 
-                          Math.sin(flickerTime * 4.7) * 0.2 + 
-                          Math.sin(flickerTime * 8.3) * 0.1;
-            const flickeredIntensity = campfireSettings.intensity * (0.7 + flicker);
-            campfireLight.intensity = Math.max(0, flickeredIntensity);
-        }
+        // ─── Atualizar Animação de Fogueira (Tremeluzir) ───
+        campfire.update();
         
         // Atualizar a lógica do guaxinim (animações e movimento)
         raccoon.update(delta, keyStates);
