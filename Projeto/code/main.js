@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import GUI from 'lil-gui';
 import { createScene } from './world/scene.js';
 import { createLights } from './world/lights.js';
+import { createClimate } from './world/Climate.js';
 import { buildWorld } from './world/World.js';
 import { Raccoon } from './entities/Raccoon.js';
 import { ThirdPersonCamera } from './controls/ThirdPersonCamera.js';
@@ -12,7 +14,10 @@ import { updateWater } from './entities/Water.js';
 
 // Elementos principais da cena
 const scene = createScene();
-createLights(scene);
+const { ambientLight, directionalLight } = createLights(scene);
+
+// Sistema de Clima com Ciclo Dia/Noite
+const climate = createClimate(scene, directionalLight, ambientLight);
 
 // Câmara e Renderer
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
@@ -82,6 +87,71 @@ raccoon.modelLoaded.then(async () => {
     
     const thirdPersonCamera = new ThirdPersonCamera(camera, raccoon.model, renderer.domElement, orbitControls);
     
+    // ═════════════════════════════════════════════════════════════════════════
+    // ─── CONFIGURAR LIL-GUI DASHBOARD PARA CONTROLO DO CLIMA ────────────────
+    // ═════════════════════════════════════════════════════════════════════════
+    
+    const gui = new GUI({ title: '🌞 Climate Dashboard' });
+    gui.domElement.style.position = 'fixed';
+    gui.domElement.style.top = '10px';
+    gui.domElement.style.right = '10px';
+    gui.domElement.style.zIndex = '1000';
+    
+    // Pasta: Controlo de Tempo
+    const timeFolder = gui.addFolder('⏰ Tempo');
+    timeFolder.open();
+    
+    timeFolder
+        .add(climate.settings.time, 'enabled')
+        .name('Ativar Ciclo')
+        .onChange((value) => climate.setTimeEnabled(value));
+    
+    timeFolder
+        .add(climate.settings.time, 'hour', 0, 24, 0.1)
+        .name('Hora do Dia')
+        .onChange((value) => climate.setHour(value));
+    
+    timeFolder
+        .add(climate.settings.time, 'speed', 0, 0.2, 0.01)
+        .name('Velocidade');
+    
+    // Mostrar hora formatada (read-only)
+    const timeDisplay = { time: climate.getTimeFormatted() };
+    timeFolder
+        .add(timeDisplay, 'time')
+        .name('Hora Atual')
+        .listen()
+        .disable();
+    
+    // Pasta: Iluminação
+    const lightingFolder = gui.addFolder('💡 Iluminação');
+    
+    lightingFolder
+        .add(directionalLight, 'intensity', 0, 2, 0.1)
+        .name('Intensidade Sol');
+    
+    lightingFolder
+        .add(ambientLight, 'intensity', 0, 1, 0.1)
+        .name('Luz Ambiente');
+    
+    // Atalhos para horas específicas (botões)
+    const presetsFolder = gui.addFolder('⚙️ Presets');
+    presetsFolder.open();
+    
+    const hoursPresets = {
+        'Amanhecer (6h)': () => climate.setHour(6),
+        'Manhã (9h)': () => climate.setHour(9),
+        'Meio-dia (12h)': () => climate.setHour(12),
+        'Tarde (15h)': () => climate.setHour(15),
+        'Pôr do Sol (18h)': () => climate.setHour(18),
+        'Noite (21h)': () => climate.setHour(21),
+        'Meia-noite (0h)': () => climate.setHour(0),
+    };
+    
+    Object.entries(hoursPresets).forEach(([label, fn]) => {
+        presetsFolder.add({ preset: fn }, 'preset').name(label);
+    });
+    
     const clock = new THREE.Clock();
 
     function animate() {
@@ -91,6 +161,10 @@ raccoon.modelLoaded.then(async () => {
         const isMoving = keyStates.w || keyStates.s || keyStates.a || keyStates.d;
         const isRunning = isMoving && keyStates.shift;
 
+        // ─── Atualizar Sistema de Clima ───
+        climate.update(delta);
+        timeDisplay.time = climate.getTimeFormatted(); // Atualizar display de hora
+        
         // Atualizar a lógica do guaxinim (animações e movimento)
         raccoon.update(delta, keyStates);
 

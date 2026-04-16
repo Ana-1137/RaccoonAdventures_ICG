@@ -12,6 +12,11 @@ function createLights(scene) {
     scene.add(directionalLight);
 
     // TODO: Adicionar luzes pontuais (fogueira) e focais (luzes de jardim)
+    
+    return {
+        ambientLight,
+        directionalLight,
+    };
 }
 
 export { createLights };
