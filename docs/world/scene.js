@@ -11,15 +11,15 @@ const SETTINGS = {
 
     textures: {
         grass: {
-            color: '../elements/textures/Default/Grass003_1K-JPG_Color.jpg',
-            normal: '../elements/textures/Default/Grass003_1K-JPG_NormalGL.jpg',
-            roughness: '../elements/textures/Default/Grass003_1K-JPG_Roughness.jpg',
+            color: 'elements/textures/Default/Grass003_1K-JPG_Color.jpg',
+            normal: 'elements/textures/Default/Grass003_1K-JPG_NormalGL.jpg',
+            roughness: 'elements/textures/Default/Grass003_1K-JPG_Roughness.jpg',
             repeat: 30,           // repetições do padrão
         },
         campfire: {
-            color: '../elements/textures/Campfire/Ground037_1K-JPG_Color.jpg',
-            normal: '../elements/textures/Campfire/Ground037_1K-JPG_NormalGL.jpg',
-            roughness: '../elements/textures/Campfire/Ground037_1K-JPG_Roughness.jpg',
+            color: 'elements/textures/Campfire/Ground037_1K-JPG_Color.jpg',
+            normal: 'elements/textures/Campfire/Ground037_1K-JPG_NormalGL.jpg',
+            roughness: 'elements/textures/Campfire/Ground037_1K-JPG_Roughness.jpg',
             repeat: 10,           // padrão mais fino para campfire
         },
     },
