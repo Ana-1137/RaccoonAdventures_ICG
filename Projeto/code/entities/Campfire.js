@@ -46,9 +46,6 @@ function loadCampfire(scene) {
                     }
                 });
                 
-                // Marcar para excluir de raycasts
-                campfire.userData.isCampfire = true;
-                
                 // Adicionar à cena
                 scene.add(campfire);
                 

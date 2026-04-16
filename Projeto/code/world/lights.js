@@ -16,7 +16,7 @@ const LIGHTING_SETTINGS = {
         intensity: 1,
         range: 15,
         position: { x: 0, y: 0.8, z: 0 },
-        castShadow: false, // Desativar para otimização
+        castShadow: true, // Desativar para otimização
     },
 };
 
@@ -71,7 +71,7 @@ function createCampfireLight(scene) {
         LIGHTING_SETTINGS.campfire.position.y - 0.8,  // Esfera muito mais para baixo
         LIGHTING_SETTINGS.campfire.position.z
     );
-    fireGroup.userData.isCampfire = true; // Marcar para excluir de raycasts
+    fireGroup.userData.isParticles = true; // Marcar GROUP para excluir de raycasts
     scene.add(fireGroup);
     
     // Material base da esfera de fogo - muito transparente, só brilho
