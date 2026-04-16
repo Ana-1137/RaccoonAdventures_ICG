@@ -41,7 +41,7 @@ function loadTent(scene) {
                 // Aplicar shadows a todas as meshes
                 tent.traverse((child) => {
                     if (child.isMesh) {
-                        child.castShadow = true;
+                        child.castShadow = false;
                         child.receiveShadow = true;
                     }
                 });

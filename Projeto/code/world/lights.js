@@ -16,7 +16,7 @@ const LIGHTING_SETTINGS = {
         intensity: 1,
         range: 15,
         position: { x: 0, y: 0.8, z: 0 },
-        castShadow: true, // Desativar para otimização
+        castShadow: false, // Desativar para otimização
     },
 };
 
@@ -35,6 +35,17 @@ function createLights(scene) {
         LIGHTING_SETTINGS.sun.position.z
     );
     directionalLight.castShadow = true; // Ativar sombras
+    
+    // ─── Configurar shadow camera para a luz direcional ───────────────────────
+    directionalLight.shadow.camera.left = -15;
+    directionalLight.shadow.camera.right = 15;
+    directionalLight.shadow.camera.top = 15;
+    directionalLight.shadow.camera.bottom = -15;
+    directionalLight.shadow.camera.near = 0.1;
+    directionalLight.shadow.camera.far = 50;
+    directionalLight.shadow.mapSize.width = 2048;  // Resolução do mapa de sombras
+    directionalLight.shadow.mapSize.height = 2048;
+    
     scene.add(directionalLight);
     
     return {
@@ -60,8 +71,16 @@ function createCampfireLight(scene) {
         LIGHTING_SETTINGS.campfire.position.y,
         LIGHTING_SETTINGS.campfire.position.z
     );
-    // Desativar sombras aqui para melhor performance (sol já projeta sombras)
-    campfireLight.castShadow = false;
+    // Ativar sombras para a fogueira
+    campfireLight.castShadow = true;
+    
+    // ─── Configurar shadow camera para o PointLight ──────────────────────────
+    campfireLight.shadow.camera.near = 0.1;
+    campfireLight.shadow.camera.far = 20;
+    campfireLight.shadow.mapSize.width = 1024;  // Resolução do mapa de sombras
+    campfireLight.shadow.mapSize.height = 1024;
+    campfireLight.shadow.bias = -0.001;  // Ajuste para evitar artefatos (acne)
+    
     scene.add(campfireLight);
     
     // ─── MODELO VISUAL DO FOGO (Esfera + Partículas) ────────────────────────────
