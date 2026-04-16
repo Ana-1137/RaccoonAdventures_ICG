@@ -162,7 +162,7 @@ class Raccoon {
      */
     _loadModel(resolve) {
         const loader = new FBXLoader();
-        loader.load('elements/Raccoon.fbx', (fbx) => {
+        loader.load('../elements/Raccoon.fbx', (fbx) => {
             this.model = fbx;
             this.model.name = 'guaxinim';
             this.model.scale.setScalar(SETTINGS.model.scale);

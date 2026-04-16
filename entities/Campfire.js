@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // ─── Configuração Central ─────────────────────────────────────────────────────
 const SETTINGS = {
     model: {
-        file: 'elements/campfire.glb',  // minúsculas - ficheiro real
+        file: '../elements/campfire.glb',  // minúsculas - ficheiro real
         scale: 0.2,              // escala normal
         position: { x: 0, y: 0.06, z: 0 },  // centro da cena
         rotation: 0,             // rotação Y em radianos

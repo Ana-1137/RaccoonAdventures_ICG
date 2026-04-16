@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // ─── Configuração Central ─────────────────────────────────────────────────────
 const SETTINGS = {
     model: {
-        file: 'elements/Log_Bench.glb',
+        file: '../elements/Log_Bench.glb',
         scale: 0.3,  // Reduzido de 1.0
     },
     placement: {
