@@ -193,7 +193,7 @@ class Raccoon {
      */
     _loadAnimations(resolve) {
         const animLoader = new FBXLoader();
-        const basePath = '../animations/';
+        const basePath = getAssetPath('animations') + '/';
 
         const loadOne = ({ name, file }) => new Promise((done) => {
             animLoader.load(basePath + file, (animFbx) => {
