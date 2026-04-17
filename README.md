@@ -23,31 +23,14 @@ Raccoon Adventures é um projeto de Computação Gráfica que demonstra conceito
 ## Requisitos
 
 - Navegador moderno com suporte a WebGL (Chrome, Firefox, Edge)
-- Servidor local (para carregar os assets corretamente)
 
-## Como Começar
+## Como Jogar
 
-### Opção 1: Live Server (Extensão VS Code)
+🎮 **Aceda diretamente ao jogo online:**
 
-1. Abra a pasta do projeto em VS Code
-2. Clique com botão direito em `index.html` e selecione "Open with Live Server"
-3. O projeto abrirá automaticamente em `http://localhost:5500`
+https://ana-1137.github.io/RaccoonAdventures_ICG/
 
-### Opção 2: Python (Servidor Local)
-
-Se tiver Python instalado:
-
-```bash
-cd Projeto/code
-
-# Python 3
-python -m http.server 8000
-
-# Ou Python 2
-python -m SimpleHTTPServer 8000
-```
-
-Depois abra o navegador em `http://localhost:8000`
+Não precisa de instalar nada! O jogo carrega automaticamente no seu navegador.
 
 ## Controlos
 
@@ -63,16 +46,16 @@ Depois abra o navegador em `http://localhost:8000`
 ## Estrutura do Projeto
 
 ```
-Projeto/
-├── code/
-│   ├── index.html           # Página principal
-│   ├── main.js              # Ponto de entrada
-│   ├── controls/            # Sistemas de controlo
-│   ├── entities/            # Modelos do jogo
-│   └── world/               # Componentes do mundo
-├── elements/                # Assets (modelos, texturas)
-├── animations/              # Animações FBX
-└── extra/                   # Documentação e referências
+RaccoonAdventures_ICG/
+├── index.html           # Página principal
+├── main.js              # Ponto de entrada
+├── config.js            # Configuração de caminhos (GitHub Pages)
+├── controls/            # Sistemas de controlo
+├── entities/            # Modelos do jogo
+├── world/               # Componentes do mundo
+├── elements/            # Assets (modelos, texturas)
+├── animations/          # Animações FBX
+└── extra/               # Documentação e referências
 ```
 
 ## Features Principais
