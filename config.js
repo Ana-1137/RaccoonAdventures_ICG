@@ -3,5 +3,7 @@
 export const BASE_PATH = window.location.hostname === 'localhost' ? '' : '/RaccoonAdventures_ICG';
 
 export function getAssetPath(relativePath) {
-    return `${BASE_PATH}/${relativePath}`;
+    const fullPath = `${BASE_PATH}/${relativePath}`;
+    console.log(`getAssetPath("${relativePath}") => "${fullPath}"`);
+    return fullPath;
 }
