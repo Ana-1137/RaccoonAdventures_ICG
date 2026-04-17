@@ -16,9 +16,25 @@ Raccoon Adventures é um projeto de Computação Gráfica que demonstra conceito
 - Geração procedural (floresta com 180 árvores)
 - Interface interativa (lil-gui)
 
-**Documentação Completa:**
-- [Proposta do Projeto (PT)](./extra/119905_PropostaProjeto.pdf)
-- [Project Brief (EN)](./extra/ICG_2526_Projeto_ENGLISH.pdf)
+## Cronograma e Documentação
+
+### 📋 Diretrizes e Proposta
+
+O projeto foi desenvolvido seguindo as diretrizes oficiais e proposta inicial:
+
+- **Diretrizes do Projeto** ([ICG_2526_Projeto_ENGLISH.pdf](./extra/ICG_2526_Projeto_ENGLISH.pdf)) - Requisitos técnicos e escopo do projeto
+- **Proposta do Projeto** ([119905_PropostaProjeto.pdf](./extra/119905_PropostaProjeto.pdf)) - Definição de conceito, objetivos e funcionalidades iniciais
+
+### ✅ Entrega Intermédia (16/04/2026)
+
+Apresentação e entrega de progresso intermédio com conquistas e estado atual do projeto:
+
+- **Slides da Apresentação** ([119905-Slides_Entrega_Intermedia.pdf](./extra/119905-Slides_Entrega_Intermedia.pdf)) - Apresentação visual do projeto, features implementadas e demo
+- **Relatório de Entrega** ([119905_ICG_Entrega_Intermedia.pdf](./extra/119905_ICG_Entrega_Intermedia.pdf)) - Documentação detalhada do progresso, desafios resolvidos e plano futuro
+
+### 📅 Próximas Fases
+
+Espaço reservado para futuras atualizações e entregas do projeto...
 
 ## Requisitos
 
