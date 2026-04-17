@@ -5,7 +5,7 @@ import { getAssetPath } from '../config.js';
 // ─── Configuração Central ─────────────────────────────────────────────────────
 const SETTINGS = {
     model: {
-        file: '../elements/Tent.glb',
+        file: getAssetPath('elements/Tent.glb'),
         scale: 0.8,              // reduzido para melhor proporção
         position: { x: 0, y: 0.4, z: -2 },  // y aumentado para sentar sobre o chão
         rotation: 0,             // rotação Y em radianos
