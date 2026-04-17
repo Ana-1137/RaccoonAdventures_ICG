@@ -30,7 +30,6 @@ Raccoon Adventures é um projeto de Computação Gráfica que demonstra conceito
 
 https://ana-1137.github.io/RaccoonAdventures_ICG/
 
-Não precisa de instalar nada! O jogo carrega automaticamente no seu navegador.
 
 ## Controlos
 
