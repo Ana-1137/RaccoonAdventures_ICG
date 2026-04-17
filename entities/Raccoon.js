@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { getAssetPath } from '../config.js';
 
 // ─── Configuração Central ─────────────────────────────────────────────────────
 // Muda estes valores para ajustar velocidades, tempos e intensidade de lean
@@ -162,7 +163,7 @@ class Raccoon {
      */
     _loadModel(resolve) {
         const loader = new FBXLoader();
-        loader.load('../elements/Raccoon.fbx', (fbx) => {
+        loader.load(getAssetPath('elements/Raccoon.fbx'), (fbx) => {
             this.model = fbx;
             this.model.name = 'guaxinim';
             this.model.scale.setScalar(SETTINGS.model.scale);

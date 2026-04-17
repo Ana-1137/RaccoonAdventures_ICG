@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getAssetPath } from '../config.js';
 
 // ─── CONFIGURAÇÃO CENTRAL ────────────────────────────────────────────────────
 // Muda estes valores para ajustar o vale, texturas e materiais do chão
@@ -11,15 +12,15 @@ const SETTINGS = {
 
     textures: {
         grass: {
-            color: '../elements/textures/Default/Grass003_1K-JPG_Color.jpg',
-            normal: '../elements/textures/Default/Grass003_1K-JPG_NormalGL.jpg',
-            roughness: '../elements/textures/Default/Grass003_1K-JPG_Roughness.jpg',
+            color: getAssetPath('elements/textures/Default/Grass003_1K-JPG_Color.jpg'),
+            normal: getAssetPath('elements/textures/Default/Grass003_1K-JPG_NormalGL.jpg'),
+            roughness: getAssetPath('elements/textures/Default/Grass003_1K-JPG_Roughness.jpg'),
             repeat: 30,           // repetições do padrão
         },
         campfire: {
-            color: '../elements/textures/Campfire/Ground037_1K-JPG_Color.jpg',
-            normal: '../elements/textures/Campfire/Ground037_1K-JPG_NormalGL.jpg',
-            roughness: '../elements/textures/Campfire/Ground037_1K-JPG_Roughness.jpg',
+            color: getAssetPath('elements/textures/Campfire/Ground037_1K-JPG_Color.jpg'),
+            normal: getAssetPath('elements/textures/Campfire/Ground037_1K-JPG_NormalGL.jpg'),
+            roughness: getAssetPath('elements/textures/Campfire/Ground037_1K-JPG_Roughness.jpg'),
             repeat: 10,           // padrão mais fino para campfire
         },
     },

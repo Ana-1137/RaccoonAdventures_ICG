@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { getAssetPath } from '../config.js';
 
 // ─── Configuração Central ─────────────────────────────────────────────────────
 const SETTINGS = {
@@ -90,25 +91,25 @@ function loadAllModels() {
         };
 
         // Carregar copa do pinheiro
-        loader.load('../elements/Copa_Tiered_Evergreen.glb', (gltf) => {
+        loader.load(getAssetPath('elements/Copa_Tiered_Evergreen.glb'), (gltf) => {
             loadedMeshes.evergreenCrown = extractFirstMesh(gltf);
             onLoaded();
         });
 
         // Carregar tronco do pinheiro
-        loader.load('../elements/Log_Tiered_Evergreen.glb', (gltf) => {
+        loader.load(getAssetPath('elements/Log_Tiered_Evergreen.glb'), (gltf) => {
             loadedMeshes.evergreenTrunk = extractFirstMesh(gltf);
             onLoaded();
         });
 
         // Carregar copa do carvalho
-        loader.load('../elements/Green_Cauliflower.glb', (gltf) => {
+        loader.load(getAssetPath('elements/Green_Cauliflower.glb'), (gltf) => {
             loadedMeshes.oakCrown = extractFirstMesh(gltf);
             onLoaded();
         });
 
         // Carregar tronco do carvalho
-        loader.load('../elements/Log_Green_Cauliflower.glb', (gltf) => {
+        loader.load(getAssetPath('elements/Log_Green_Cauliflower.glb'), (gltf) => {
             loadedMeshes.oakTrunk = extractFirstMesh(gltf);
             onLoaded();
         });
