@@ -26,7 +26,7 @@ const SETTINGS = {
         evergreenPercent: 0.6,
         oakPercent: 0.4,
         centerX: 0,
-        centerZ: 0,
+        centerZ: 1.5,
         innerRadius: 3,
         outerRadius: 7.5,
         // Espaçamento da grelha hexagonal = distância mínima entre árvores
