@@ -6,56 +6,58 @@ import { getAssetPath } from '../../config.js';
 const SETTINGS = {
     scale: {
         evergreen: {
-            trunk:        { min: 0.3, max: 0.5 },
-            crown:        { min: 0.3, max: 0.5 },
+            trunk: { min: 0.3, max: 0.5 },
+            crown: { min: 0.3, max: 0.5 },
             crownOffsetY: { min: 0.3, max: 0.8 },
         },
         oak: {
-            trunk:        { min: 0.3,  max: 0.45 },
-            crown:        { min: 0.3,  max: 0.45 },
-            crownOffsetY: { min: 0.3,  max: 0.5 },
+            trunk: { min: 0.3, max: 0.45 },
+            crown: { min: 0.3, max: 0.45 },
+            crownOffsetY: { min: 0.3, max: 0.5 },
         },
     },
     wind: {
-        speed:      1.0,
+        speed: 1.0,
         intensityX: 0.15,
         intensityZ: 0.12,
     },
     spawn: {
-        totalTrees:       180,
+        totalTrees: 180,
         evergreenPercent: 0.6,
-        oakPercent:       0.4,
-        centerX:          0,
-        centerZ:          0,
-        innerRadius:      3,
-        outerRadius:      8,
+        oakPercent: 0.4,
+        centerX: 0,
+        centerZ: 0,
+        innerRadius: 3,
+        outerRadius: 8,
         // Espaçamento da grelha hexagonal = distância mínima entre árvores
-        spacing:          0.6,
+        spacing: 0.6,
         // Jitter máximo aplicado a cada posição da grelha (% do espaçamento)
-        jitterFactor:     0.3,
-        groundY:          0.0,
+        jitterFactor: 0.3,
+        groundY: 0.0,
     },
     lod: {
-        animateDistance: 4,   // reduzido de 5 para animar menos árvores
-        staticDistance:  25,
+        animateDistance: 4,
+        staticDistance: 25,
+        // Throttle do vento: atualizar a ~30Hz em vez de 60Hz
+        windUpdateInterval: 0.033,
     },
 };
 
 // ─── Estado do Módulo ─────────────────────────────────────────────────────────
 let loadedMeshes = { evergreenTrunk: null, evergreenCrown: null, oakTrunk: null, oakCrown: null };
 let instancedMeshes = { trunkEvergreen: null, crownEvergreen: null, trunkOak: null, crownOak: null };
-let treeInstances   = [];
+let treeInstances = [];
 let raccoonPosition = new THREE.Vector3();
 
 // ─── Objectos pré-alocados (reutilizados em SPAWN e UPDATE) ──────────────────
-const _qX      = new THREE.Quaternion();
-const _qZ      = new THREE.Quaternion();
-const _matrix  = new THREE.Matrix4();
-const _pos     = new THREE.Vector3();
-const _scale   = new THREE.Vector3();
-const _axis    = new THREE.Vector3();
+const _qX = new THREE.Quaternion();
+const _qZ = new THREE.Quaternion();
+const _matrix = new THREE.Matrix4();
+const _pos = new THREE.Vector3();
+const _scale = new THREE.Vector3();
+const _axis = new THREE.Vector3();
 // Quaternião neutro reutilizável no spawn (nunca modificado)
-const _identQ  = new THREE.Quaternion();
+const _identQ = new THREE.Quaternion();
 
 // ─── FUNÇÕES AUXILIARES ───────────────────────────────────────────────────────
 
@@ -94,22 +96,22 @@ function inExclusionZone(x, z, zone) {
  */
 function generateForestPositions(exclusionZones) {
     const { innerRadius, outerRadius, spacing, jitterFactor, groundY, centerX, centerZ } = SETTINGS.spawn;
-    const rowStep  = spacing * Math.sqrt(3) / 2;   // altura de linha na grelha hex
-    const jitter   = spacing * jitterFactor;
+    const rowStep = spacing * Math.sqrt(3) / 2;   // altura de linha na grelha hex
+    const jitter = spacing * jitterFactor;
     const maxCoord = outerRadius + spacing;
-    const maxRows  = Math.ceil(maxCoord / rowStep);
-    const maxCols  = Math.ceil(maxCoord / spacing);
-    const ir2      = innerRadius * innerRadius;
-    const or2      = outerRadius * outerRadius;
+    const maxRows = Math.ceil(maxCoord / rowStep);
+    const maxCols = Math.ceil(maxCoord / spacing);
+    const ir2 = innerRadius * innerRadius;
+    const or2 = outerRadius * outerRadius;
 
     const candidates = [];
 
     for (let row = -maxRows; row <= maxRows; row++) {
-        const z       = row * rowStep + centerZ;
+        const z = row * rowStep + centerZ;
         const xOffset = (row % 2 !== 0) ? spacing * 0.5 : 0; // alternância hex
 
         for (let col = -maxCols; col <= maxCols; col++) {
-            const x    = col * spacing + xOffset + centerX;
+            const x = col * spacing + xOffset + centerX;
             const dist2 = (x - centerX) ** 2 + (z - centerZ) ** 2;
 
             // Verificar anel
@@ -145,7 +147,7 @@ function generateForestPositions(exclusionZones) {
  */
 function loadAllModels() {
     const loader = new GLTFLoader();
-    const load   = (path) => new Promise((resolve, reject) => loader.load(path, resolve, undefined, reject));
+    const load = (path) => new Promise((resolve, reject) => loader.load(path, resolve, undefined, reject));
 
     return Promise.all([
         load(getAssetPath('elements/Copa_Tiered_Evergreen.glb')),
@@ -155,26 +157,39 @@ function loadAllModels() {
     ]).then(([evCrown, evTrunk, oakCrown, oakTrunk]) => {
         loadedMeshes.evergreenCrown = extractFirstMesh(evCrown);
         loadedMeshes.evergreenTrunk = extractFirstMesh(evTrunk);
-        loadedMeshes.oakCrown       = extractFirstMesh(oakCrown);
-        loadedMeshes.oakTrunk       = extractFirstMesh(oakTrunk);
+        loadedMeshes.oakCrown = extractFirstMesh(oakCrown);
+        loadedMeshes.oakTrunk = extractFirstMesh(oakTrunk);
     });
 }
 
 /**
  * Extrai geometria, material e yOffset do primeiro mesh de um GLTF.
+ * Converte para MeshLambertMaterial (muito mais rápido que MeshStandardMaterial/PBR).
+ * alphaTest corta pixels transparentes nas folhas sem precisar de blending.
  * @param {Object} gltf
  * @returns {{ geometry, material, yOffset }}
  */
 function extractFirstMesh(gltf) {
-    let geometry = null, material = null, yOffset = 0;
+    let geometry = null, srcMaterial = null, yOffset = 0;
     gltf.scene.traverse(child => {
         if (child.isMesh && !geometry) {
             geometry = child.geometry.clone();
-            material = child.material.clone();
+            srcMaterial = child.material;
             const box = new THREE.Box3().setFromObject(new THREE.Mesh(geometry));
-            yOffset   = -box.min.y;
+            yOffset = -box.min.y;
         }
     });
+
+    // MeshLambertMaterial — shader muito mais simples que PBR/MeshStandardMaterial.
+    // Para árvores (elementos de fundo) a diferença visual é imperceptível.
+    const material = new THREE.MeshLambertMaterial({
+        color: srcMaterial?.color ?? 0xffffff,
+        map: srcMaterial?.map ?? null,
+        // alphaTest corta as folhas sem blending order (mais rápido que transparent:true)
+        alphaTest: (srcMaterial?.alphaTest > 0) ? srcMaterial.alphaTest : 0.4,
+        transparent: false, // alphaTest já trata a transparência
+    });
+
     return { geometry, material, yOffset };
 }
 
@@ -189,7 +204,7 @@ function createInstancedMesh(meshData, count) {
     material.side = THREE.FrontSide; // só face frontal — metade dos fragmentos
 
     const mesh = new THREE.InstancedMesh(geometry, material, count);
-    mesh.castShadow    = false; // 180 árvores × shadow = demasiado custoso
+    mesh.castShadow = false; // 180 árvores × shadow = demasiado custoso
     mesh.receiveShadow = true;
     mesh.frustumCulled = true;
     return mesh;
@@ -218,13 +233,13 @@ function setInstanceMatrix(instMesh, idx, position, scale) {
  * @param {Object}       options - { exclusionZones, totalTrees, evergreenPercent, oakPercent }
  */
 async function spawnForest(scene, raccoon, options = {}) {
-    const totalTrees       = options.totalTrees       ?? SETTINGS.spawn.totalTrees;
+    const totalTrees = options.totalTrees ?? SETTINGS.spawn.totalTrees;
     const evergreenPercent = options.evergreenPercent ?? SETTINGS.spawn.evergreenPercent;
-    const oakPercent       = options.oakPercent       ?? SETTINGS.spawn.oakPercent;
-    const exclusionZones   = options.exclusionZones   ?? [];
+    const oakPercent = options.oakPercent ?? SETTINGS.spawn.oakPercent;
+    const exclusionZones = options.exclusionZones ?? [];
 
     const maxEvergreens = Math.ceil(totalTrees * evergreenPercent);
-    const maxOaks       = Math.ceil(totalTrees * oakPercent);
+    const maxOaks = Math.ceil(totalTrees * oakPercent);
 
     await loadAllModels();
 
@@ -237,17 +252,17 @@ async function spawnForest(scene, raccoon, options = {}) {
     // ── InstancedMeshes ──
     instancedMeshes.trunkEvergreen = createInstancedMesh(loadedMeshes.evergreenTrunk, maxEvergreens);
     instancedMeshes.crownEvergreen = createInstancedMesh(loadedMeshes.evergreenCrown, maxEvergreens);
-    instancedMeshes.trunkOak       = createInstancedMesh(loadedMeshes.oakTrunk,       maxOaks);
-    instancedMeshes.crownOak       = createInstancedMesh(loadedMeshes.oakCrown,       maxOaks);
+    instancedMeshes.trunkOak = createInstancedMesh(loadedMeshes.oakTrunk, maxOaks);
+    instancedMeshes.crownOak = createInstancedMesh(loadedMeshes.oakCrown, maxOaks);
 
     // ── Pinheiros ────────────────────────────────────────────────────────────
     let evIdx = 0;
     for (let i = 0; i < maxEvergreens && posIdx < positions.length; i++, posIdx++) {
-        const pos            = positions[posIdx];
-        const trunkScale     = rand(SETTINGS.scale.evergreen.trunk.min,        SETTINGS.scale.evergreen.trunk.max);
-        const crownScale     = rand(SETTINGS.scale.evergreen.crown.min,        SETTINGS.scale.evergreen.crown.max);
-        const crownOffsetY   = rand(SETTINGS.scale.evergreen.crownOffsetY.min, SETTINGS.scale.evergreen.crownOffsetY.max);
-        const trunkY         = SETTINGS.spawn.groundY + loadedMeshes.evergreenTrunk.yOffset * trunkScale;
+        const pos = positions[posIdx];
+        const trunkScale = rand(SETTINGS.scale.evergreen.trunk.min, SETTINGS.scale.evergreen.trunk.max);
+        const crownScale = rand(SETTINGS.scale.evergreen.crown.min, SETTINGS.scale.evergreen.crown.max);
+        const crownOffsetY = rand(SETTINGS.scale.evergreen.crownOffsetY.min, SETTINGS.scale.evergreen.crownOffsetY.max);
+        const trunkY = SETTINGS.spawn.groundY + loadedMeshes.evergreenTrunk.yOffset * trunkScale;
 
         _pos.copy(pos).setY(trunkY);
         setInstanceMatrix(instancedMeshes.trunkEvergreen, evIdx, _pos, trunkScale);
@@ -272,11 +287,11 @@ async function spawnForest(scene, raccoon, options = {}) {
     // ── Carvalhos ─────────────────────────────────────────────────────────────
     let oakIdx = 0;
     for (let i = 0; i < maxOaks && posIdx < positions.length; i++, posIdx++) {
-        const pos            = positions[posIdx];
-        const trunkScale     = rand(SETTINGS.scale.oak.trunk.min,        SETTINGS.scale.oak.trunk.max);
-        const crownScale     = rand(SETTINGS.scale.oak.crown.min,        SETTINGS.scale.oak.crown.max);
-        const crownOffsetY   = rand(SETTINGS.scale.oak.crownOffsetY.min, SETTINGS.scale.oak.crownOffsetY.max);
-        const trunkY         = SETTINGS.spawn.groundY + loadedMeshes.oakTrunk.yOffset * trunkScale;
+        const pos = positions[posIdx];
+        const trunkScale = rand(SETTINGS.scale.oak.trunk.min, SETTINGS.scale.oak.trunk.max);
+        const crownScale = rand(SETTINGS.scale.oak.crown.min, SETTINGS.scale.oak.crown.max);
+        const crownOffsetY = rand(SETTINGS.scale.oak.crownOffsetY.min, SETTINGS.scale.oak.crownOffsetY.max);
+        const trunkY = SETTINGS.spawn.groundY + loadedMeshes.oakTrunk.yOffset * trunkScale;
 
         _pos.copy(pos).setY(trunkY);
         setInstanceMatrix(instancedMeshes.trunkOak, oakIdx, _pos, trunkScale);
@@ -317,21 +332,26 @@ async function spawnForest(scene, raccoon, options = {}) {
 
 /**
  * Anima a copa das árvores próximas ao jogador com oscilação procedural de vento.
- * LOD de dois níveis:
- *   < animateDistance → animação completa
- *   < staticDistance  → estática (matrix não alterada)
- *   ≥ staticDistance  → ignorada (frustum culling faz o resto)
- * @param {number}          delta
- * @param {THREE.Vector3}   playerPos
+ * Throttle: só corre a ~30 Hz (não em cada frame).
+ * @param {number}        delta
+ * @param {THREE.Vector3} playerPos
  */
+let _windTimeSince = 0;
+
 function update(delta, playerPos) {
+    // Throttle: apenas atualizar o vento a ~30 Hz
+    _windTimeSince += delta;
+    if (_windTimeSince < SETTINGS.lod.windUpdateInterval) return;
+    const elapsed = _windTimeSince;
+    _windTimeSince = 0;
+
     const now = Date.now() / 1000;
     const { speed, intensityX, intensityZ } = SETTINGS.wind;
     const { animateDistance, staticDistance } = SETTINGS.lod;
 
     if (playerPos) raccoonPosition.copy(playerPos);
 
-    let evUpdated  = false;
+    let evUpdated = false;
     let oakUpdated = false;
 
     for (const tree of treeInstances) {
@@ -339,7 +359,7 @@ function update(delta, playerPos) {
         if (dist >= staticDistance || dist >= animateDistance) continue;
 
         const time = now * speed + tree.windPhaseOffset;
-        _qX.setFromAxisAngle(_axis.set(1, 0, 0), Math.sin(time)       * intensityX);
+        _qX.setFromAxisAngle(_axis.set(1, 0, 0), Math.sin(time) * intensityX);
         _qZ.setFromAxisAngle(_axis.set(0, 0, 1), Math.cos(time * 0.8) * intensityZ);
         const q = _qX.multiply(_qZ);
 
@@ -363,7 +383,7 @@ function update(delta, playerPos) {
         }
     }
 
-    if (evUpdated)  instancedMeshes.crownEvergreen.instanceMatrix.needsUpdate = true;
+    if (evUpdated) instancedMeshes.crownEvergreen.instanceMatrix.needsUpdate = true;
     if (oakUpdated) instancedMeshes.crownOak.instanceMatrix.needsUpdate = true;
 }
 
