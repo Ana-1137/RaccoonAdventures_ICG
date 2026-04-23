@@ -1,13 +1,7 @@
 import * as THREE from 'three';
-import { getAssetPath } from '../../config.js';
-import { loadGLTF, cloneScene, freezeObject } from '../../core/AssetCache.js';
 
 // ─── Configuração Central ─────────────────────────────────────────────────────
 const SETTINGS = {
-    models: [
-        getAssetPath('elements/cascata1.glb'),
-        getAssetPath('elements/cascata2.glb')
-    ],
     wall: {
         centerX: 0,
         centerZ: 1.5,          // Deslocado para +Z conforme pedido
@@ -22,32 +16,48 @@ const SETTINGS = {
 };
 
 /**
- * Extrai a geometria e o material do primeiro mesh num GLTF.
+ * Cria a geometria de uma rocha procedural ("low poly") retangular.
  */
-function extractFirstMesh(gltf) {
-    let geometry = null, material = null;
-    gltf.scene.traverse(child => {
-        if (child.isMesh && !geometry) {
-            geometry = child.geometry.clone();
-            // Converter para Lambert para poupar GPU, igual à floresta
-            material = new THREE.MeshLambertMaterial({
-                color: child.material.color ?? 0xffffff,
-                map: child.material.map ?? null,
-            });
-        }
+function createProceduralRockBlock(width, height, depth) {
+    // Usar BoxGeometry com alguns segmentos para permitir deformação
+    const geometry = new THREE.BoxGeometry(width, height, depth, 3, 5, 3);
+    
+    // Deformar vértices aleatoriamente para parecer orgânico (mas subtil)
+    const pos = geometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const y = pos.getY(i);
+        const z = pos.getZ(i);
+        
+        // Multiplicador de ruído mais subtil (apenas +/- 10% ou um offset fixo pequeno)
+        const offsetX = (Math.random() - 0.5) * 0.3;
+        const offsetY = (Math.random() - 0.5) * 0.3;
+        const offsetZ = (Math.random() - 0.5) * 0.3;
+        
+        pos.setXYZ(i, x + offsetX, y + offsetY, z + offsetZ);
+    }
+    
+    geometry.computeVertexNormals();
+
+    const material = new THREE.MeshLambertMaterial({
+        color: 0x5a5a5a, // Cinzento rocha mais escuro
+        flatShading: true // Dá o aspeto low-poly facetado para esconder a falta de texturas detalhadas
     });
+
     return { geometry, material };
 }
 
 /**
- * Constrói uma muralha em forma de U usando InstancedMesh para máxima performance.
+ * Constrói uma muralha em forma de U usando InstancedMesh procedural para máxima performance.
  * @param {THREE.Scene} scene 
  */
 export async function loadBoundaryWall(scene) {
-    const gltfs = await Promise.all(SETTINGS.models.map(file => loadGLTF(file)));
-
-    // Extrair os dados dos meshes
-    const meshesData = gltfs.map(extractFirstMesh);
+    // Extrair os dados dos meshes gerados em código (ZERO DOWNLOADS DE REDE!)
+    // Criamos 2 tipos diferentes de blocos: um mais alto e um mais largo
+    const rock1 = createProceduralRockBlock(1.5, 3.0, 1.5);
+    const rock2 = createProceduralRockBlock(2.0, 2.5, 1.8);
+    
+    const meshesData = [rock1, rock2];
 
     const { centerX, centerZ, radius, count, scaleMin, scaleMax, startAngle, endAngle } = SETTINGS.wall;
 
@@ -74,9 +84,9 @@ export async function loadBoundaryWall(scene) {
         const z = centerZ + Math.sin(angle) * radius;
         const scale = scaleMin + Math.random() * (scaleMax - scaleMin);
 
-        // A altura (y) precisa ser proporcional à escala para não ficar enterrada.
-        // As cascatas normais estão a Y=1.99 com escala 2.0 (ratio aprox 1.0)
-        dummy.position.set(x, scale * 1.0, z);
+        // A altura precisa ser ajustada dependendo se é rocha1 ou rocha2
+        const baseHeight = (typeIdx === 0) ? 3.0 : 2.5;
+        dummy.position.set(x, (baseHeight * scale) / 2 - 0.2, z);
         dummy.scale.setScalar(scale);
         dummy.rotation.y = -angle + Math.PI / 2 + (Math.random() - 0.5) * 1.0;
         dummy.updateMatrix();
