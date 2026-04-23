@@ -1,79 +1,56 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { getAssetPath } from '../../config.js';
+import { loadGLTF, cloneScene, freezeObject } from '../../core/AssetCache.js';
 
 // ─── Configuração Central ─────────────────────────────────────────────────────
 const SETTINGS = {
     model: {
-        file: getAssetPath('elements/Log_Bench.glb'),
-        scale: 0.3,  // Reduzido de 1.0
+        file:  getAssetPath('elements/Log_Bench.glb'),
+        scale: 0.3,
     },
     placement: {
         positions: [
-            { x: 0, y: 0.06, z: 0.7, rotation: 0 },           // Atrás da fogueira
-            { x: 0.6, y: 0.06, z: -0.1, rotation: Math.PI * 0.6 },      // Direita - perto da tenda
-            { x: -0.6, y: 0.06, z: -0.1, rotation: Math.PI * 1.4 },     // Esquerda - perto da tenda
+            { x:  0.0, y: 0.06, z:  0.7, rotation: 0 },
+            { x:  0.6, y: 0.06, z: -0.1, rotation: Math.PI * 0.6 },
+            { x: -0.6, y: 0.06, z: -0.1, rotation: Math.PI * 1.4 },
         ],
     },
 };
 
 /**
- * Carrega 3 logs de banco à volta da fogueira.
- * @param {THREE.Scene} scene - Cena Three.js
- * @returns {Promise<THREE.Group[]>} Promise resolvida com array de logs carregados
+ * Carrega o GLB do banco de tronco uma única vez (via AssetCache) e clona-o
+ * para cada instância. Elimina os 3 pedidos HTTP/parse redundantes.
+ * Objectos marcados como estáticos (matrixAutoUpdate = false).
+ * @param {THREE.Scene} scene
+ * @returns {Promise<THREE.Group[]>}
  */
-function loadLogBenches(scene) {
-    return new Promise((resolve, reject) => {
-        const loader = new GLTFLoader();
-        const logs = [];
-        let loadedCount = 0;
-        
-        SETTINGS.placement.positions.forEach((posConfig) => {
-            loader.load(
-                SETTINGS.model.file,
-                (gltf) => {
-                    const log = gltf.scene;
-                    
-                    // Aplicar transformações
-                    log.position.set(
-                        posConfig.x,
-                        posConfig.y || 0,  // Usar y do config se existir, senão 0
-                        posConfig.z
-                    );
-                    log.scale.set(
-                        SETTINGS.model.scale,
-                        SETTINGS.model.scale,
-                        SETTINGS.model.scale
-                    );
-                    log.rotation.y = posConfig.rotation;
-                    
-                    // Aplicar shadows a todas as meshes
-                    log.traverse((child) => {
-                        if (child.isMesh) {
-                            // child.castShadow = false; // Objeto estático, sem necessidade
-                            child.castShadow = true; // Ativar para criar sombras no chão
-                            child.receiveShadow = true;
-                        }
-                    });
-                    
-                    // Adicionar à cena
-                    scene.add(log);
-                    logs.push(log);
-                    loadedCount++;
-                    
-                    // Resolver apenas quando todos os logs estiverem carregados
-                    if (loadedCount === SETTINGS.placement.positions.length) {
-                        resolve(logs);
-                    }
-                },
-                undefined,
-                (error) => {
-                    console.error('Erro ao carregar log de banco:', error);
-                    reject(error);
-                }
-            );
+async function loadLogBenches(scene) {
+    // Uma única parse do GLB → 3 clones em memória
+    const gltf = await loadGLTF(SETTINGS.model.file);
+    const logs  = [];
+
+    for (const cfg of SETTINGS.placement.positions) {
+        const log = cloneScene(gltf);
+
+        log.position.set(cfg.x, cfg.y, cfg.z);
+        log.scale.setScalar(SETTINGS.model.scale);
+        log.rotation.y = cfg.rotation;
+
+        log.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow    = true;   // bench projeta sombra da fogueira
+                child.receiveShadow = true;
+            }
         });
-    });
+
+        // Congelar matrix: elimina recálculo por frame (objeto nunca se move)
+        freezeObject(log);
+
+        scene.add(log);
+        logs.push(log);
+    }
+
+    return logs;
 }
 
 export { loadLogBenches, SETTINGS };

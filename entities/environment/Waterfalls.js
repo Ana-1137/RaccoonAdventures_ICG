@@ -1,133 +1,81 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { getAssetPath } from '../../config.js';
+import { loadGLTF, cloneScene, freezeObject } from '../../core/AssetCache.js';
 
 // ─── Configuração Central ─────────────────────────────────────────────────────
 const SETTINGS = {
     cascata1: {
-        file: getAssetPath('elements/cascata1.glb'),
-        scale: 2.0,
+        file:     getAssetPath('elements/cascata1.glb'),
+        scale:    2.0,
         position: { x: 0.7, y: 1.99, z: -4.5 },
         rotation: 0,
     },
     cascata2: {
-        file: getAssetPath('elements/cascata2.glb'),
-        scale: 2.0,
+        file:     getAssetPath('elements/cascata2.glb'),
+        scale:    2.0,
         position: { x: 4.9, y: 1.99, z: -4.5 },
         rotation: 0,
     },
-    
-    // Zona de exclusão para as árvores (calculada baseada nas posições)
     exclusionZone: {
-        type: 'rect',
-        halfW: 4.5,  // 7 unidades de largura
-        halfD: 2.5,  // 7 unidades de profundidade
+        type:  'rect',
+        halfW: 4.5,
+        halfD: 2.5,
     },
-    
-    // Posição da água (entre as cascatas)
     waterArea: {
-        y: 0.1,  // Altura da água
+        y: 0.1,
     },
 };
 
-// Calcular a zona de exclusão dinamicamente baseada nas posições das cascatas
+// Calcular centro da zona de exclusão a partir das posições
 SETTINGS.exclusionZone.x = (SETTINGS.cascata1.position.x + SETTINGS.cascata2.position.x) / 2;
-SETTINGS.exclusionZone.z = SETTINGS.cascata1.position.z;
+SETTINGS.exclusionZone.z =  SETTINGS.cascata1.position.z;
+SETTINGS.waterArea.x     = SETTINGS.exclusionZone.x;
+SETTINGS.waterArea.z     = SETTINGS.exclusionZone.z;
 
-// Calcular a posição da água
-SETTINGS.waterArea.x = (SETTINGS.cascata1.position.x + SETTINGS.cascata2.position.x) / 2;
-SETTINGS.waterArea.z = SETTINGS.cascata1.position.z;
-
-// ─── Variáveis Globais ─────────────────────────────────────────────────────
-let loadedCascatas = {
-    cascata1: null,
-    cascata2: null,
-};
-
-// ─── Funções Privadas ─────────────────────────────────────────────────────
+// ─── FUNÇÕES AUXILIARES ──────────────────────────────────────────────────────
 
 /**
- * Carrega um modelo de cascata individual.
- * @param {GLTFLoader} loader - Instância do loader
- * @param {string} file - Caminho do ficheiro
- * @param {Object} config - Configuração de posição, escala e rotação
- * @returns {Promise<THREE.Group>} Promise resolvida com o modelo carregado
+ * Carrega e posiciona um modelo de cascata.
+ * @param {string} file
+ * @param {Object} cfg  - { scale, position, rotation }
+ * @param {THREE.Scene} scene
+ * @returns {Promise<THREE.Group>}
  */
-function loadWaterfallModel(loader, file, config) {
-    return new Promise((resolve, reject) => {
-        loader.load(
-            file,
-            (gltf) => {
-                const cascade = gltf.scene;
-                
-                // Aplicar transformações
-                cascade.position.set(
-                    config.position.x,
-                    config.position.y,
-                    config.position.z
-                );
-                cascade.scale.set(
-                    config.scale,
-                    config.scale,
-                    config.scale
-                );
-                cascade.rotation.y = config.rotation;
-                
-                // Aplicar shadows a todas as meshes
-                cascade.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = false; // Objeto estático
-                        child.receiveShadow = true;
-                        // Ativar raycast para deteção de colisões (ex: edges para medo)
-                        child.raycast = THREE.Mesh.prototype.raycast.bind(child);
-                    }
-                });
-                
-                resolve(cascade);
-            },
-            undefined,
-            (error) => {
-                console.error(`Erro ao carregar cascata (${file}):`, error);
-                reject(error);
-            }
-        );
-    });
-}
+async function loadSingleWaterfall(file, cfg, scene) {
+    const gltf    = await loadGLTF(file);
+    const cascade = cloneScene(gltf);
 
-// ─── Funções Públicas ─────────────────────────────────────────────────────
+    cascade.position.set(cfg.position.x, cfg.position.y, cfg.position.z);
+    cascade.scale.setScalar(cfg.scale);
+    cascade.rotation.y = cfg.rotation;
 
-/**
- * Carrega ambas as cascatas (esquerda e direita) na cena.
- * @param {THREE.Scene} scene - Cena Three.js
- * @returns {Promise<Object>} Promise resolvida com { cascata1, cascata2 }
- */
-function loadWaterfalls(scene) {
-    return new Promise(async (resolve, reject) => {
-        try {
-            const loader = new GLTFLoader();
-            
-            // Carregar ambas as cascatas em paralelo
-            const [cascata1, cascata2] = await Promise.all([
-                loadWaterfallModel(loader, SETTINGS.cascata1.file, SETTINGS.cascata1),
-                loadWaterfallModel(loader, SETTINGS.cascata2.file, SETTINGS.cascata2),
-            ]);
-            
-            // Guardar referências globais
-            loadedCascatas.cascata1 = cascata1;
-            loadedCascatas.cascata2 = cascata2;
-            
-            // Adicionar à cena
-            scene.add(cascata1);
-            scene.add(cascata2);
-            
-            console.log('Cascatas carregadas com sucesso');
-            resolve({ cascata1, cascata2 });
-        } catch (error) {
-            console.error('Erro ao carregar cascatas:', error);
-            reject(error);
+    cascade.traverse(child => {
+        if (child.isMesh) {
+            child.castShadow    = false;
+            child.receiveShadow = true;
+            child.raycast       = THREE.Mesh.prototype.raycast.bind(child);
         }
     });
+
+    freezeObject(cascade);
+    scene.add(cascade);
+    return cascade;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Carrega as duas cascatas em paralelo via AssetCache.
+ * @param {THREE.Scene} scene
+ * @returns {Promise<{ cascata1, cascata2 }>}
+ */
+async function loadWaterfalls(scene) {
+    const [cascata1, cascata2] = await Promise.all([
+        loadSingleWaterfall(SETTINGS.cascata1.file, SETTINGS.cascata1, scene),
+        loadSingleWaterfall(SETTINGS.cascata2.file, SETTINGS.cascata2, scene),
+    ]);
+    console.log('Cascatas carregadas com sucesso');
+    return { cascata1, cascata2 };
+}
+
 export { loadWaterfalls, SETTINGS };

@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 
 // ─── CONFIGURAÇÃO CENTRAL ────────────────────────────────────────────────────
-// Luz ambiente e directional do sol. A luz da fogueira está em CampfireLight.js.
-const LIGHTING_SETTINGS = {
+// Luzes de cena: luz ambiente global e luz direcional do sol.
+// Luzes de entidades (fogueira, pirilampos, lanternas) → ver lights/CampfireLight.js etc.
+const SETTINGS = {
     sun: {
         color:     0xffffff,
         intensity: 1,
         position:  { x: 5, y: 10, z: 7.5 },
         shadow: {
-            frustum:   15,   // metade da dimensão da câmara ortogonal de sombra
+            frustum:   15,
             near:      0.1,
             far:       50,
             mapWidth:  2048,
@@ -24,40 +25,39 @@ const LIGHTING_SETTINGS = {
 // ─── FUNÇÕES AUXILIARES ──────────────────────────────────────────────────────
 
 /**
- * Configura a shadow camera de uma luz direcional com valores simétricos.
+ * Configura a shadow camera de uma DirectionalLight com valores simétricos.
  * @param {THREE.DirectionalLight} light
- * @param {Object} shadowCfg - LIGHTING_SETTINGS.sun.shadow
+ * @param {Object} cfg - SETTINGS.sun.shadow
  */
-function configureShadowCamera(light, shadowCfg) {
-    const cam = light.shadow.camera;
-    cam.left   = -shadowCfg.frustum;
-    cam.right  =  shadowCfg.frustum;
-    cam.top    =  shadowCfg.frustum;
-    cam.bottom = -shadowCfg.frustum;
-    cam.near   =  shadowCfg.near;
-    cam.far    =  shadowCfg.far;
-    light.shadow.mapSize.width  = shadowCfg.mapWidth;
-    light.shadow.mapSize.height = shadowCfg.mapHeight;
+function configureShadowCamera(light, cfg) {
+    const cam   = light.shadow.camera;
+    cam.left    = -cfg.frustum;
+    cam.right   =  cfg.frustum;
+    cam.top     =  cfg.frustum;
+    cam.bottom  = -cfg.frustum;
+    cam.near    =  cfg.near;
+    cam.far     =  cfg.far;
+    light.shadow.mapSize.width  = cfg.mapWidth;
+    light.shadow.mapSize.height = cfg.mapHeight;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Cria e adiciona à cena a luz ambiente e a luz direcional (sol).
- * A luz da fogueira é gerida por entities/environment/CampfireLight.js.
+ * Futuros tipos de luz (fogueira, pirilampos, lanternas) devem ter
+ * o seu próprio ficheiro em lights/.
  * @param {THREE.Scene} scene
- * @returns {{ ambientLight: THREE.AmbientLight, directionalLight: THREE.DirectionalLight }}
+ * @returns {{ ambientLight, directionalLight }}
  */
-function createLights(scene) {
-    // Luz ambiente global
+export function createLights(scene) {
     const ambientLight = new THREE.AmbientLight(
-        LIGHTING_SETTINGS.ambient.color,
-        LIGHTING_SETTINGS.ambient.intensity
+        SETTINGS.ambient.color,
+        SETTINGS.ambient.intensity
     );
     scene.add(ambientLight);
 
-    // Luz direcional (sol)
-    const { color, intensity, position, shadow } = LIGHTING_SETTINGS.sun;
+    const { color, intensity, position, shadow } = SETTINGS.sun;
     const directionalLight = new THREE.DirectionalLight(color, intensity);
     directionalLight.position.set(position.x, position.y, position.z);
     directionalLight.castShadow = true;
@@ -67,4 +67,4 @@ function createLights(scene) {
     return { ambientLight, directionalLight };
 }
 
-export { createLights, LIGHTING_SETTINGS };
+export { SETTINGS as SCENE_LIGHT_SETTINGS };
