@@ -23,17 +23,28 @@ function createProceduralRockBlock(width, height, depth, material) {
     // Usar BoxGeometry com alguns segmentos para permitir deformação
     const geometry = new THREE.BoxGeometry(width, height, depth, 3, 5, 3);
     
-    // Deformar vértices aleatoriamente para parecer orgânico (mas subtil)
+    // Função pseudo-aleatória baseada nas coordenadas (para evitar que vértices duplicados nas arestas se separem)
+    const pseudoRandom = (x, y, z, seed) => {
+        // Arredondar para evitar problemas de floating point em vértices sobrepostos
+        const rx = Math.round(x * 100);
+        const ry = Math.round(y * 100);
+        const rz = Math.round(z * 100);
+        const dot = rx * 12.9898 + ry * 78.233 + rz * 37.719 + seed;
+        const s = Math.sin(dot) * 43758.5453;
+        return s - Math.floor(s);
+    };
+
+    // Deformar vértices para parecer orgânico (sem rasgar a malha)
     const pos = geometry.attributes.position;
     for (let i = 0; i < pos.count; i++) {
         const x = pos.getX(i);
         const y = pos.getY(i);
         const z = pos.getZ(i);
         
-        // Multiplicador de ruído mais subtil (apenas +/- 10% ou um offset fixo pequeno)
-        const offsetX = (Math.random() - 0.5) * 0.3;
-        const offsetY = (Math.random() - 0.5) * 0.3;
-        const offsetZ = (Math.random() - 0.5) * 0.3;
+        // Multiplicador de ruído consistente para a mesma posição no espaço
+        const offsetX = (pseudoRandom(x, y, z, 1) - 0.5) * 0.3;
+        const offsetY = (pseudoRandom(x, y, z, 2) - 0.5) * 0.3;
+        const offsetZ = (pseudoRandom(x, y, z, 3) - 0.5) * 0.3;
         
         pos.setXYZ(i, x + offsetX, y + offsetY, z + offsetZ);
     }
