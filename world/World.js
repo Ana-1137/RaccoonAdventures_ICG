@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createGround } from './Ground.js';
 import { spawnForest }  from '../entities/environment/Forest.js';
-import { loadTent }      from '../entities/environment/Tent.js';
+import { loadTent, TENT_SETTINGS }      from '../entities/environment/Tent.js';
 import { loadCampfire }  from '../entities/environment/Campfire.js';
 import { loadLogBenches } from '../entities/environment/LogBench.js';
 import { loadWaterfalls, SETTINGS as WATERFALLS_SETTINGS } from '../entities/environment/Waterfalls.js';
@@ -28,6 +28,7 @@ export async function buildWorld(scene, raccoon) {
             exclusionZones: [
                 WATERFALLS_SETTINGS.exclusionZone,
                 WATER_SETTINGS.valeExclusionZone,
+                TENT_SETTINGS.exclusionZone,
             ],
         }),
         loadTent(scene),

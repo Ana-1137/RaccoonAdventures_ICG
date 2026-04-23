@@ -10,6 +10,12 @@ const SETTINGS = {
         position: { x: 0, y: 0.4, z: -2 },
         rotation: 0,
     },
+    exclusionZone: {
+        type: 'circle',
+        x: 0,
+        z: -2,
+        radius: 1.5, // Raio para proteger a tenda das árvores
+    }
 };
 
 /**
@@ -39,4 +45,4 @@ async function loadTent(scene) {
     return tent;
 }
 
-export { loadTent, SETTINGS };
+export { loadTent, SETTINGS as TENT_SETTINGS };
