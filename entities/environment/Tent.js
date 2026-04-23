@@ -1,64 +1,65 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { getAssetPath } from '../config.js';
+import { getAssetPath } from '../../config.js';
 
 // ─── Configuração Central ─────────────────────────────────────────────────────
 const SETTINGS = {
     model: {
-        file: getAssetPath('elements/campfire.glb'),  // minúsculas - ficheiro real
-        scale: 0.2,              // escala normal
-        position: { x: 0, y: 0.06, z: 0 },  // centro da cena
+        file: getAssetPath('elements/Tent.glb'),
+        scale: 0.8,              // reduzido para melhor proporção
+        position: { x: 0, y: 0.4, z: -2 },  // y aumentado para sentar sobre o chão
         rotation: 0,             // rotação Y em radianos
     },
 };
 
 /**
- * Carrega o modelo da fogueira na cena.
+ * Carrega o modelo da tenda da cena.
  * @param {THREE.Scene} scene - Cena Three.js
  * @returns {Promise<THREE.Group>} Promise resolvida com o modelo carregado
  */
-function loadCampfire(scene) {
+function loadTent(scene) {
     return new Promise((resolve, reject) => {
         const loader = new GLTFLoader();
         
         loader.load(
             SETTINGS.model.file,
             (gltf) => {
-                const campfire = gltf.scene;
+                const tent = gltf.scene;
                 
                 // Aplicar transformações
-                campfire.position.set(
+                tent.position.set(
                     SETTINGS.model.position.x,
                     SETTINGS.model.position.y,
                     SETTINGS.model.position.z
                 );
-                campfire.scale.set(
+                tent.scale.set(
                     SETTINGS.model.scale,
                     SETTINGS.model.scale,
                     SETTINGS.model.scale
                 );
-                campfire.rotation.y = SETTINGS.model.rotation;
+                tent.rotation.y = SETTINGS.model.rotation;
                 
                 // Aplicar shadows a todas as meshes
-                campfire.traverse((child) => {
+                tent.traverse((child) => {
                     if (child.isMesh) {
-                        child.castShadow = false; // Objeto estático, não precisa shadow
+                        child.castShadow = false;
                         child.receiveShadow = true;
                     }
                 });
                 
                 // Adicionar à cena
-                scene.add(campfire);
+                scene.add(tent);
                 
-                resolve(campfire);
+                console.log('Tenda carregada com sucesso');
+                resolve(tent);
             },
             undefined,
             (error) => {
-                console.error('Erro ao carregar fogueira:', error);
+                console.error('Erro ao carregar tenda:', error);
                 reject(error);
             }
         );
     });
 }
 
-export { loadCampfire, SETTINGS };
+export { loadTent, SETTINGS };

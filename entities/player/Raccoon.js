@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
-import { getAssetPath } from '../config.js';
+import { getAssetPath } from '../../config.js';
 
 // ─── Configuração Central ─────────────────────────────────────────────────────
 // Muda estes valores para ajustar velocidades, tempos e intensidade de lean

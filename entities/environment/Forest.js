@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { getAssetPath } from '../config.js';
+import { getAssetPath } from '../../config.js';
 
 // ─── Configuração Central ─────────────────────────────────────────────────────
 const SETTINGS = {
