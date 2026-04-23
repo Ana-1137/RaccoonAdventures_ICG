@@ -5,6 +5,7 @@ import { loadTent }      from '../entities/environment/Tent.js';
 import { loadCampfire }  from '../entities/environment/Campfire.js';
 import { loadLogBenches } from '../entities/environment/LogBench.js';
 import { loadWaterfalls, SETTINGS as WATERFALLS_SETTINGS } from '../entities/environment/Waterfalls.js';
+import { loadBoundaryWall } from '../entities/environment/BoundaryWall.js';
 import { createWater, WATER_SETTINGS } from '../entities/environment/Water.js';
 
 /**
@@ -33,6 +34,7 @@ export async function buildWorld(scene, raccoon) {
         loadCampfire(scene),
         loadLogBenches(scene),
         loadWaterfalls(scene),
+        loadBoundaryWall(scene),
         createWater(scene),
     ]);
 

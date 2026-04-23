@@ -28,7 +28,7 @@ const SETTINGS = {
         centerX: 0,
         centerZ: 0,
         innerRadius: 3,
-        outerRadius: 8,
+        outerRadius: 7.5,
         // Espaçamento da grelha hexagonal = distância mínima entre árvores
         spacing: 0.6,
         // Jitter máximo aplicado a cada posição da grelha (% do espaçamento)
