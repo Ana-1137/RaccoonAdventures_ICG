@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getAssetPath } from '../../config.js';
 
 // ─── Configuração Central ─────────────────────────────────────────────────────
 const SETTINGS = {
@@ -18,7 +19,7 @@ const SETTINGS = {
 /**
  * Cria a geometria de uma rocha procedural ("low poly") retangular.
  */
-function createProceduralRockBlock(width, height, depth) {
+function createProceduralRockBlock(width, height, depth, material) {
     // Usar BoxGeometry com alguns segmentos para permitir deformação
     const geometry = new THREE.BoxGeometry(width, height, depth, 3, 5, 3);
     
@@ -39,11 +40,6 @@ function createProceduralRockBlock(width, height, depth) {
     
     geometry.computeVertexNormals();
 
-    const material = new THREE.MeshLambertMaterial({
-        color: 0x5a5a5a, // Cinzento rocha mais escuro
-        flatShading: true // Dá o aspeto low-poly facetado para esconder a falta de texturas detalhadas
-    });
-
     return { geometry, material };
 }
 
@@ -52,10 +48,32 @@ function createProceduralRockBlock(width, height, depth) {
  * @param {THREE.Scene} scene 
  */
 export async function loadBoundaryWall(scene) {
-    // Extrair os dados dos meshes gerados em código (ZERO DOWNLOADS DE REDE!)
+    // ── Carregar Texturas PBR da Rocha ──
+    const textureLoader = new THREE.TextureLoader();
+    const loadTex = (path) => {
+        const tex = textureLoader.load(getAssetPath(path));
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(2, 2); // Repetir a textura para não ficar esticada no monólito
+        return tex;
+    };
+
+    const colorTex     = loadTex('elements/textures/Rock/Rock058_1K-JPG_Color.jpg');
+    const normalTex    = loadTex('elements/textures/Rock/Rock058_1K-JPG_NormalGL.jpg');
+    const roughnessTex = loadTex('elements/textures/Rock/Rock058_1K-JPG_Roughness.jpg');
+
+    // Usamos StandardMaterial para suportar Normal e Roughness maps (dá um aspeto incrivel com luz)
+    const rockMaterial = new THREE.MeshStandardMaterial({
+        color: 0xaaaaaa, // Cor base neutra
+        map: colorTex,
+        normalMap: normalTex,
+        roughnessMap: roughnessTex,
+        flatShading: true
+    });
+
+    // Extrair os dados dos meshes gerados em código (ZERO DOWNLOADS DE MODELOS 3D!)
     // Criamos 2 tipos diferentes de blocos: um mais alto e um mais largo
-    const rock1 = createProceduralRockBlock(1.5, 3.0, 1.5);
-    const rock2 = createProceduralRockBlock(2.0, 2.5, 1.8);
+    const rock1 = createProceduralRockBlock(1.5, 3.0, 1.5, rockMaterial);
+    const rock2 = createProceduralRockBlock(2.0, 2.5, 1.8, rockMaterial);
     
     const meshesData = [rock1, rock2];
 
