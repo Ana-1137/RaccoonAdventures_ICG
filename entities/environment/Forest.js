@@ -22,13 +22,13 @@ const SETTINGS = {
         intensityZ: 0.12,
     },
     spawn: {
-        totalTrees: 180,
+        totalTrees: 120,
         evergreenPercent: 0.6,
         oakPercent: 0.4,
         centerX: 0,
         centerZ: 1.5,
         innerRadius: 3,
-        outerRadius: 7.5,
+        outerRadius: 6.7,
         // Espaçamento da grelha hexagonal = distância mínima entre árvores
         spacing: 0.6,
         // Jitter máximo aplicado a cada posição da grelha (% do espaçamento)
