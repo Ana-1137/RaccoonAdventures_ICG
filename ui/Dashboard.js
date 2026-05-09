@@ -80,12 +80,10 @@ function _buildLightingFolder(gui, campfire, structureLights) {
     if (structureLights) {
         folder
             .add(structureLights.settings, 'enabled')
-            .name('Luzes Estruturais')
-            .onChange((value) => {
-                for (const light of structureLights.lights) {
-                    light.visible = value;
-                }
-            });
+            .name('Luzes Estruturais');
+        folder
+            .add(structureLights.settings, 'alwaysOn')
+            .name('Sempre Ligadas');
     }
 }
 

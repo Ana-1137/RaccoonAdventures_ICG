@@ -71,8 +71,10 @@ raccoon.modelLoaded.then(async () => {
 
         // Luzes estruturais: acendem à noite, apagam de dia (se enabled no dashboard)
         if (structureLights.settings.enabled) {
-            const night = climate.isNight();
-            for (const light of structureLights.lights) light.visible = night;
+            const on = structureLights.settings.alwaysOn || climate.isNight();
+            for (const light of structureLights.lights) light.visible = on;
+        } else {
+            for (const light of structureLights.lights) light.visible = false;
         }
 
         // Passar posição do raccoon para LOD de distância das partículas

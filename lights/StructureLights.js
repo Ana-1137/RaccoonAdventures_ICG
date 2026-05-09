@@ -210,6 +210,6 @@ export function createStructureLights(scene) {
     scene.add(lanternGroup);
     allLights.push(lanternLight);
 
-    const settings = { enabled: true };
+    const settings = { enabled: true, alwaysOn: false };
     return { lights: allLights, settings };
 }
