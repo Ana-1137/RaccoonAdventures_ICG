@@ -55,10 +55,9 @@ function createGardenPost(x, z) {
     const mat = new THREE.MeshLambertMaterial({ color: 0x5c3d1e });
 
     // Haste
-    group.add(Object.assign(
-        new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, SETTINGS.post.height, 6), mat),
-        { position: new THREE.Vector3(0, SETTINGS.post.height / 2, 0) }
-    ));
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, SETTINGS.post.height, 6), mat);
+    shaft.position.set(0, SETTINGS.post.height / 2, 0);
+    group.add(shaft);
 
     // Cúpula
     const dome = new THREE.Mesh(
