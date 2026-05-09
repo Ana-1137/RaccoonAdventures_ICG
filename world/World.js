@@ -9,30 +9,36 @@ import { loadBoundaryWall } from '../entities/environment/BoundaryWall.js';
 import { createWater, WATER_SETTINGS } from '../entities/environment/Water.js';
 import { createFish } from '../entities/environment/Fish.js';
 import { createFireflies } from '../entities/environment/Fireflies.js';
+import { createFlowers } from '../entities/environment/Flowers.js';
 
 /**
  * Constrói o mundo carregando todos os elementos da cena em paralelo.
  * Orquestra: chão, floresta, tenda, fogueira, bancos, cascatas e água.
  * @param {THREE.Scene}  scene   - Cena Three.js
  * @param {THREE.Group}  raccoon - Modelo do guaxinim (para LOD da floresta)
+ * @param {Function}     [onProgress] - callback(pct 0-100, msg)
  * @returns {Promise<Object>} Objeto com referências aos elementos carregados
  */
-export async function buildWorld(scene, raccoon) {
+export async function buildWorld(scene, raccoon, onProgress = null) {
+    const progress = (pct, msg) => onProgress?.(pct, msg);
+
     // ── Chão (síncrono) ─────────────────────────────────────────────────────
     const { groundMesh, campfireMesh } = createGround();
     scene.add(groundMesh);
     scene.add(campfireMesh);
+    progress(10, 'Chão criado...');
+
+    // ── Zonas de exclusão partilhadas ────────────────────────────────────────
+    const exclusionZones = [
+        WATERFALLS_SETTINGS.exclusionZone,
+        WATER_SETTINGS.valeExclusionZone,
+        TENT_SETTINGS.exclusionZone,
+    ];
 
     // ── Elementos assíncronos em paralelo ────────────────────────────────────
-    // A floresta recebe as zonas de exclusão das cascatas e do vale
+    progress(15, 'A carregar elementos...');
     const [forest, tent, campfire, logBenches, waterfalls, { waterfall, basin }] = await Promise.all([
-        spawnForest(scene, raccoon, {
-            exclusionZones: [
-                WATERFALLS_SETTINGS.exclusionZone,
-                WATER_SETTINGS.valeExclusionZone,
-                TENT_SETTINGS.exclusionZone,
-            ],
-        }),
+        spawnForest(scene, raccoon, { exclusionZones }),
         loadTent(scene),
         loadCampfire(scene),
         loadLogBenches(scene),
@@ -40,19 +46,19 @@ export async function buildWorld(scene, raccoon) {
         loadBoundaryWall(scene),
         createWater(scene),
     ]);
+    progress(75, 'Floresta e estruturas prontas...');
 
     createFish(scene);
     createFireflies(scene);
+    progress(85, 'Fauna criada...');
+
+    // ── Flores: após floresta, mesmas zonas de exclusão ──────────────────────
+    await createFlowers(scene, exclusionZones);
+    progress(100, 'Pronto!');
 
     return {
-        groundMesh,
-        campfireMesh,
-        forest,
-        tent,
-        campfire,
-        logBenches,
-        waterfalls,
-        waterfall,
-        basin,
+        groundMesh, campfireMesh,
+        forest, tent, campfire, logBenches,
+        waterfalls, waterfall, basin,
     };
 }
