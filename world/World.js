@@ -7,6 +7,7 @@ import { loadLogBenches } from '../entities/environment/LogBench.js';
 import { loadWaterfalls, SETTINGS as WATERFALLS_SETTINGS } from '../entities/environment/Waterfalls.js';
 import { loadBoundaryWall } from '../entities/environment/BoundaryWall.js';
 import { createWater, WATER_SETTINGS } from '../entities/environment/Water.js';
+import { createFish } from '../entities/environment/Fish.js';
 
 /**
  * Constrói o mundo carregando todos os elementos da cena em paralelo.
@@ -38,6 +39,8 @@ export async function buildWorld(scene, raccoon) {
         loadBoundaryWall(scene),
         createWater(scene),
     ]);
+
+    createFish(scene);
 
     return {
         groundMesh,

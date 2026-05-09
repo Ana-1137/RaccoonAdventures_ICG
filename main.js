@@ -9,6 +9,7 @@ import { ThirdPersonCamera }  from './controls/ThirdPersonCamera.js';
 import { keyStates }          from './controls/KeyboardControls.js';
 import { update as updateForest } from './entities/environment/Forest.js';
 import { updateWater }        from './entities/environment/Water.js';
+import { updateFish }         from './entities/environment/Fish.js';
 import { createCampfireLight } from './lights/CampfireLight.js';
 import { createDashboard }    from './ui/Dashboard.js';
 
@@ -72,6 +73,7 @@ raccoon.modelLoaded.then(async () => {
         updateForest(delta, raccoon.model.position);
 
         if (world.basin) updateWater(world.basin, delta);
+        updateFish(delta);
 
         thirdPersonCamera.update(isMoving, orbitControls, isRunning);
         orbitControls.update();
