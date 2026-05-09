@@ -47,7 +47,7 @@ const SETTINGS = {
     // ── Lanterna da tenda ────────────────────────────────────────────────────
     // Tenda em {x:0, y:0.4, z:-2}, escala 0.8 — lanterna à entrada
     lantern: {
-        position: { x: -0.2, y: 0.08, z: -2.2w },
+        position: { x: -0.2, y: 0.08, z: -2.2 },
         lightIntensity: 0.6,
         lightRange: 2.5,
         lightColor: 0xffcc66,
