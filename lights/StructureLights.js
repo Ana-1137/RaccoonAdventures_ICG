@@ -2,36 +2,46 @@ import * as THREE from 'three';
 
 // ─── CONFIGURAÇÃO CENTRAL ────────────────────────────────────────────────────
 const SETTINGS = {
-    festoon: {
-        // Pontos de ancoragem do cordão (árvores/postes à volta do acampamento)
-        anchors: [
-            { x: -2.5, y: 2.2, z:  2.0 },   // árvore esquerda-frente
-            { x:  2.5, y: 2.2, z:  2.0 },   // árvore direita-frente
-            { x:  2.5, y: 2.2, z: -2.5 },   // árvore direita-trás (perto da tenda)
-            { x: -2.5, y: 2.2, z: -2.5 },   // árvore esquerda-trás
-        ],
-        bulbsPerSegment: 4,    // lâmpadas entre cada par de âncoras
-        bulbColor: 0xffdd88,   // branco-quente
-        bulbSize: 0.06,
-        lightIntensity: 0.8,
-        lightRange: 1.5,
-        sag: 0.25,             // curvatura do fio (metros de descida no meio)
-    },
-    gardenPosts: [
-        // Ao longo da margem do vale (lado esquerdo do rio)
-        { x:  1.2, z:  1.5 },
-        { x:  1.2, z:  0.0 },
-        { x:  1.2, z: -1.5 },
-        { x:  1.2, z: -3.0 },
+    // ── Varais de lâmpadas festoon ──────────────────────────────────────────
+    // Cada varal é definido por dois postes (A e B) e tem lâmpadas penduradas entre eles
+    festoonStrings: [
+        {
+            // Varal 1: ao lado do acampamento (poste esquerdo ↔ poste direito)
+            poleA: { x: -1.8, z:  0.5 },
+            poleB: { x:  1.8, z:  0.5 },
+            poleHeight: 2.2,
+        },
+        {
+            // Varal 2: atravessa o rio (margem esquerda ↔ margem direita)
+            poleA: { x:  1.0, z: -1.5 },
+            poleB: { x:  4.2, z: -1.5 },
+            poleHeight: 2.2,
+        },
     ],
-    post: {
-        height: 0.6,
-        lightIntensity: 0.6,
-        lightRange: 1.2,
+    festoon: {
+        bulbsPerString: 5,
+        bulbColor: 0xffdd88,
+        bulbRadius: 0.05,
+        lightIntensity: 0.7,
+        lightRange: 1.8,
+        sag: 0.3,              // curvatura do varal (metros de descida no meio)
+    },
+    // ── Marcadores de chão ao longo do rio ──────────────────────────────────
+    groundMarkers: [
+        { x: 1.2, z:  1.5 },
+        { x: 1.2, z:  0.0 },
+        { x: 1.2, z: -1.5 },
+        { x: 1.2, z: -3.0 },
+    ],
+    marker: {
+        stakeHeight: 0.12,     // estaca muito baixa
+        lightIntensity: 0.3,
+        lightRange: 0.6,
         lightColor: 0xffeebb,
     },
+    // ── Lanterna da tenda ────────────────────────────────────────────────────
     lantern: {
-        position: { x: 0.6, y: 1.6, z: -2.2 },  // galho perto da entrada da tenda
+        position: { x: 0.6, y: 1.6, z: -2.2 },
         lightIntensity: 0.9,
         lightRange: 2.5,
         lightColor: 0xffcc66,
@@ -40,70 +50,71 @@ const SETTINGS = {
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────
 
-/** Cria uma lâmpada esférica pequena (bulbo festoon). */
-function createBulb(color) {
+/** Cria um poste alto de varal (cilindro fino). */
+function createFestoonPole(x, z, height) {
     const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(SETTINGS.festoon.bulbSize, 6, 6),
-        new THREE.MeshBasicMaterial({ color })
+        new THREE.CylinderGeometry(0.025, 0.03, height, 6),
+        new THREE.MeshLambertMaterial({ color: 0x5c3d1e })
     );
+    mesh.position.set(x, height / 2, z);
     return mesh;
 }
 
-/** Cria um poste de jardim procedural (cilindro + cúpula). */
-function createGardenPost(x, z) {
-    const group = new THREE.Group();
-    const mat = new THREE.MeshLambertMaterial({ color: 0x5c3d1e });
-
-    // Haste
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, SETTINGS.post.height, 6), mat);
-    shaft.position.set(0, SETTINGS.post.height / 2, 0);
-    group.add(shaft);
-
-    // Cúpula
-    const dome = new THREE.Mesh(
-        new THREE.SphereGeometry(0.07, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2),
-        new THREE.MeshLambertMaterial({ color: 0x333333 })
+/** Cria um bulbo esférico de lâmpada festoon. */
+function createBulb(color, radius) {
+    return new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 6, 6),
+        new THREE.MeshBasicMaterial({ color })
     );
-    dome.position.y = SETTINGS.post.height;
-    group.add(dome);
-
-    // Luz
-    const light = new THREE.SpotLight(
-        SETTINGS.post.lightColor,
-        SETTINGS.post.lightIntensity,
-        SETTINGS.post.lightRange,
-        Math.PI / 3,   // ângulo do cone
-        0.5            // penumbra
-    );
-    light.position.set(0, SETTINGS.post.height, 0);
-    light.target.position.set(0, 0, 0);
-    group.add(light);
-    group.add(light.target);
-
-    group.position.set(x, 0, z);
-    return group;
 }
 
-/** Cria a lanterna da tenda (caixa + luz). */
+/** Cria um marcador de chão minúsculo (estaca + ponto de luz). */
+function createGroundMarker(x, z) {
+    const group = new THREE.Group();
+    const { stakeHeight, lightIntensity, lightRange, lightColor } = SETTINGS.marker;
+
+    // Estaca
+    const stake = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.008, 0.01, stakeHeight, 5),
+        new THREE.MeshLambertMaterial({ color: 0x4a3010 })
+    );
+    stake.position.y = stakeHeight / 2;
+    group.add(stake);
+
+    // Cúpula minúscula
+    const cap = new THREE.Mesh(
+        new THREE.SphereGeometry(0.025, 6, 4, 0, Math.PI * 2, 0, Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: lightColor })
+    );
+    cap.position.y = stakeHeight;
+    group.add(cap);
+
+    // Luz pontual fraca
+    const light = new THREE.PointLight(lightColor, lightIntensity, lightRange);
+    light.position.y = stakeHeight;
+    group.add(light);
+
+    group.position.set(x, 0, z);
+    return { group, light };
+}
+
+/** Cria a lanterna da tenda. */
 function createTentLantern() {
     const group = new THREE.Group();
     const { position, lightIntensity, lightRange, lightColor } = SETTINGS.lantern;
 
-    // Corpo da lanterna
     const body = new THREE.Mesh(
         new THREE.BoxGeometry(0.08, 0.12, 0.08),
         new THREE.MeshLambertMaterial({ color: 0x222222 })
     );
     group.add(body);
 
-    // Vidro emissivo
     const glass = new THREE.Mesh(
         new THREE.BoxGeometry(0.06, 0.09, 0.06),
         new THREE.MeshBasicMaterial({ color: lightColor, transparent: true, opacity: 0.7 })
     );
     group.add(glass);
 
-    // Luz
     const light = new THREE.PointLight(lightColor, lightIntensity, lightRange);
     group.add(light);
 
@@ -114,49 +125,49 @@ function createTentLantern() {
 // ─── FUNÇÃO PÚBLICA ──────────────────────────────────────────────────────────
 
 /**
- * Cria e adiciona à cena: cordão festoon, postes de jardim e lanterna da tenda.
+ * Cria e adiciona à cena:
+ *  - 2 varais de lâmpadas festoon (acampamento + atravessa o rio)
+ *  - Marcadores de chão minúsculos ao longo da margem do rio
+ *  - Lanterna pendurada na tenda
  * @param {THREE.Scene} scene
  * @returns {{ lights: THREE.Light[], settings: Object }}
  */
 export function createStructureLights(scene) {
     const allLights = [];
+    const { festoon, festoonStrings, groundMarkers, marker } = SETTINGS;
 
-    // ── 1. CORDÃO FESTOON ────────────────────────────────────────────────────
-    const { anchors, bulbsPerSegment, bulbColor, lightIntensity, lightRange, sag } = SETTINGS.festoon;
+    // ── 1. VARAIS FESTOON ────────────────────────────────────────────────────
+    for (const str of festoonStrings) {
+        const { poleA, poleB, poleHeight } = str;
 
-    for (let s = 0; s < anchors.length; s++) {
-        const a = anchors[s];
-        const b = anchors[(s + 1) % anchors.length];
+        // Postes
+        scene.add(createFestoonPole(poleA.x, poleA.z, poleHeight));
+        scene.add(createFestoonPole(poleB.x, poleB.z, poleHeight));
 
-        for (let i = 1; i <= bulbsPerSegment; i++) {
-            const t = i / (bulbsPerSegment + 1);
+        // Lâmpadas ao longo do varal com sag parabólico
+        const n = festoon.bulbsPerString;
+        for (let i = 1; i <= n; i++) {
+            const t = i / (n + 1);
+            const x = poleA.x + (poleB.x - poleA.x) * t;
+            const z = poleA.z + (poleB.z - poleA.z) * t;
+            const y = poleHeight - festoon.sag * 4 * t * (1 - t); // parábola
 
-            // Interpolação linear + sag parabólico
-            const x = a.x + (b.x - a.x) * t;
-            const z = a.z + (b.z - a.z) * t;
-            const yLinear = a.y + (b.y - a.y) * t;
-            const ySag = -sag * 4 * t * (1 - t);   // parábola: 0 nas pontas, -sag no meio
-            const y = yLinear + ySag;
-
-            // Bulbo visual
-            const bulb = createBulb(bulbColor);
+            const bulb = createBulb(festoon.bulbColor, festoon.bulbRadius);
             bulb.position.set(x, y, z);
             scene.add(bulb);
 
-            // Luz pontual por bulbo (intensidade baixa para não sobrecarregar)
-            const light = new THREE.PointLight(bulbColor, lightIntensity, lightRange);
+            const light = new THREE.PointLight(festoon.bulbColor, festoon.lightIntensity, festoon.lightRange);
             light.position.set(x, y, z);
             scene.add(light);
             allLights.push(light);
         }
     }
 
-    // ── 2. POSTES DE JARDIM ──────────────────────────────────────────────────
-    for (const cfg of SETTINGS.gardenPosts) {
-        const post = createGardenPost(cfg.x, cfg.z);
-        scene.add(post);
-        // Recolher SpotLights do grupo
-        post.traverse(obj => { if (obj.isLight) allLights.push(obj); });
+    // ── 2. MARCADORES DE CHÃO ────────────────────────────────────────────────
+    for (const cfg of groundMarkers) {
+        const { group, light } = createGroundMarker(cfg.x, cfg.z);
+        scene.add(group);
+        allLights.push(light);
     }
 
     // ── 3. LANTERNA DA TENDA ─────────────────────────────────────────────────
@@ -164,8 +175,6 @@ export function createStructureLights(scene) {
     scene.add(lanternGroup);
     allLights.push(lanternLight);
 
-    // ── Settings expostos para o Dashboard ───────────────────────────────────
     const settings = { enabled: true };
-
     return { lights: allLights, settings };
 }
