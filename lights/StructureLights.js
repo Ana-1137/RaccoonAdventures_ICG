@@ -182,7 +182,9 @@ export function createStructureLights(scene) {
         }
         const wireGeo = new THREE.BufferGeometry().setFromPoints(wirePoints);
         const wireMat = new THREE.LineBasicMaterial({ color: 0x333333 });
-        scene.add(new THREE.Line(wireGeo, wireMat));
+        const wire = new THREE.Line(wireGeo, wireMat);
+        wire.raycast = () => {};
+        scene.add(wire);
 
         for (let i = 1; i <= n; i++) {
             const t = i / (n + 1);
