@@ -36,6 +36,7 @@ export function createRain(scene) {
     });
 
     _points = new THREE.Points(geo, mat);
+    _points.userData.isParticles = true;  // ignorado pelo raycast do raccoon
     _points.visible = false;
     scene.add(_points);
 }

@@ -127,7 +127,7 @@ raccoon.modelLoaded.then(async () => {
         updateRain(delta, camera.position);
 
         // Flores — coleta por proximidade
-        const collected = updateFlowers(raccoon.model.position);
+        const collected = updateFlowers(raccoon.model.position, delta);
         const { total } = getFlowerCount();
         _flowerHUD.textContent = `🌸 ${collected} / ${total}`;
 
