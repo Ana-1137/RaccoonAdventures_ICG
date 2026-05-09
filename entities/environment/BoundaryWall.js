@@ -118,18 +118,21 @@ export async function loadBoundaryWall(scene) {
         const x = centerX + Math.cos(angle) * radius;
         const z = centerZ + Math.sin(angle) * radius;
 
-        // Saltar pedras demasiado perto das cascatas
-        const tooClose = exclusions.some(e => {
-            const dx = x - e.x, dz = z - e.z;
-            return Math.sqrt(dx * dx + dz * dz) < e.minDist;
-        });
-        if (tooClose) continue;
+        // Deslocar pedras demasiado perto das cascatas para +X
+        let px = x, pz = z;
+        for (const e of exclusions) {
+            const dx = px - e.x, dz = pz - e.z;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist < e.minDist) {
+                px += (e.minDist - dist) + 0.3; // empurrar para +X com margem
+            }
+        }
 
         const scale = scaleMin + Math.random() * (scaleMax - scaleMin);
 
         // A altura precisa ser ajustada dependendo se é rocha1 ou rocha2
         const baseHeight = (typeIdx === 0) ? 3.0 : 2.5;
-        dummy.position.set(x, (baseHeight * scale) / 2 - 0.2, z);
+        dummy.position.set(px, (baseHeight * scale) / 2 - 0.2, pz);
         dummy.scale.setScalar(scale);
         dummy.rotation.y = -angle + Math.PI / 2 + (Math.random() - 0.5) * 1.0;
         dummy.updateMatrix();
