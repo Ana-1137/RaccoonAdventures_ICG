@@ -3,19 +3,24 @@ import * as THREE from 'three';
 // ─── CONFIGURAÇÃO CENTRAL ────────────────────────────────────────────────────
 const SETTINGS = {
     // ── Varais de lâmpadas festoon ──────────────────────────────────────────
-    // Cada varal é definido por dois postes (A e B) e tem lâmpadas penduradas entre eles
     festoonStrings: [
         {
-            // Varal 1: ao lado do acampamento (poste esquerdo ↔ poste direito)
-            poleA: { x: -1.8, z:  0.5 },
-            poleB: { x:  1.8, z:  0.5 },
-            poleHeight: 2.2,
+            // Varal 1: horizontal ao lado do acampamento (esquerda ↔ direita)
+            poleA: { x: -1.2, z:  0.5 },
+            poleB: { x:  1.2, z:  0.5 },
+            poleHeight: 1.4,
         },
         {
-            // Varal 2: atravessa o rio (margem esquerda ↔ margem direita)
-            poleA: { x:  1.0, z: -1.5 },
-            poleB: { x:  4.2, z: -1.5 },
-            poleHeight: 2.2,
+            // Varal 2: vertical ao lado das árvores (norte ↔ sul), junto à floresta
+            poleA: { x: -2.0, z:  0.5 },
+            poleB: { x: -2.0, z: -2.0 },
+            poleHeight: 1.4,
+        },
+        {
+            // Varal 3: horizontal mais abaixo, lado do rio (menos disperso)
+            poleA: { x:  0.5, z: -1.5 },
+            poleB: { x:  2.5, z: -1.5 },
+            poleHeight: 1.4,
         },
     ],
     festoon: {
@@ -24,17 +29,17 @@ const SETTINGS = {
         bulbRadius: 0.05,
         lightIntensity: 0.7,
         lightRange: 1.8,
-        sag: 0.3,              // curvatura do varal (metros de descida no meio)
+        sag: 0.3,
     },
     // ── Marcadores de chão ao longo do rio ──────────────────────────────────
+    // Removido o marcador em z:-3.0 (sobrepunha-se à cascata)
     groundMarkers: [
         { x: 1.2, z:  1.5 },
         { x: 1.2, z:  0.0 },
         { x: 1.2, z: -1.5 },
-        { x: 1.2, z: -3.0 },
     ],
     marker: {
-        stakeHeight: 0.12,     // estaca muito baixa
+        stakeHeight: 0.12,
         lightIntensity: 0.3,
         lightRange: 0.6,
         lightColor: 0xffeebb,
