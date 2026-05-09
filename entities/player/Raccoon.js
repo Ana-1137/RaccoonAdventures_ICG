@@ -401,9 +401,8 @@ class Raccoon {
                             if (worldNormal.y < SETTINGS.physics.wallNormalThreshold) {
                                 isWallInFront = true; // Parede detetada
                             }
-                        } else {
-                            isWallInFront = true; // Sem info de face, assumir parede
                         }
+                        // Sem face (Line, Points, etc.) — não bloqueia
                     }
                 }
 
@@ -564,10 +563,8 @@ class Raccoon {
                     if (worldNormal.y < SETTINGS.physics.wallNormalThreshold) {
                         isWallBlocking = true; // Parede detetada à frente
                     }
-                } else {
-                    // Se não temos info de face, assumir que é parede por segurança
-                    isWallBlocking = true;
                 }
+                // Sem face (Line, Points, etc.) — não bloqueia
             }
 
             if (isSafe && !isWallBlocking) {
