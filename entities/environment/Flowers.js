@@ -11,9 +11,9 @@ const SETTINGS = {
     sparkle: {
         count: 8,
         color: 0xffee88,
-        size: 0.06,
+        size: 0.018,
         speed: 0.4,
-        spread: 0.15,
+        spread: 0.04,
     },
 };
 
