@@ -2,36 +2,31 @@ import * as THREE from 'three';
 import { getValeCenterXAtZ, GROUND_SETTINGS } from '../../world/Ground.js';
 
 // ─── CONFIGURAÇÃO CENTRAL ────────────────────────────────────────────────────
-// O basin está em {cx:2.6, cz:0}, tamanho {w:3.2, h:9.3}
-// O vale tem uma curva — o centro X desloca-se ligeiramente ao longo do Z
-// Os peixes nadam ao longo do eixo Z (cima/baixo no rio) com oscilação em X
 const SETTINGS = {
-    count: 6,
-    color: 0xf4a460,
-    basin: {
-        cx: 2.6,          // centro X do rio
-        zMin: -4.0,       // limite sul do rio (perto das cascatas)
-        zMax:  4.0,       // limite norte do rio
-        y: -0.06,         // Y base (superfície da água)
-        xSpread: 0.6,     // variação lateral máxima em X
+    // Centros fixos das elipses ao longo do rio (Z distribuído)
+    orbits: [
+        { z: -3.0 }, { z: -1.5 }, { z:  0.0 },
+        { z:  1.5 }, { z:  3.0 }, { z:  3.8 },
+    ],
+    orbit: {
+        radiusX: 0.35,   // raio da elipse no eixo X (largura)
+        radiusZ: 0.55,   // raio da elipse no eixo Z (comprimento)
+        speedMin: 0.6,   // rad/s
+        speedMax: 1.2,
+        yBase: -0.06,    // Y base (superfície da água)
+        yDip: -0.12,     // Y mínimo (mergulho suave)
     },
-    swim: {
-        speedMin: 0.8,
-        speedMax: 1.6,
-        // Oscilação lateral (simula curva do vale)
-        wobbleAmpX: 0.3,
-        wobbleFreqX: 0.4,
-        // Salto fora de água
-        jumpInterval: { min: 4.0, max: 9.0 }, // segundos entre saltos
-        jumpHeight: 0.25,
-        jumpDuration: 0.5,  // segundos no ar
+    jump: {
+        interval: { min: 5.0, max: 12.0 },
+        height: 0.28,
+        duration: 0.55,
     },
 };
 
 // ─── GEOMETRIA ───────────────────────────────────────────────────────────────
 function createFishMesh() {
+    const mat = new THREE.MeshLambertMaterial({ color: 0xf4a460 });
     const group = new THREE.Group();
-    const mat = new THREE.MeshLambertMaterial({ color: SETTINGS.color });
 
     const body = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.18, 6), mat);
     body.rotation.x = Math.PI / 2;
@@ -49,99 +44,79 @@ function createFishMesh() {
 const fishes = [];
 
 export function createFish(scene) {
-    const { cx, zMin, zMax, y, xSpread } = SETTINGS.basin;
-    const { speedMin, speedMax, jumpInterval } = SETTINGS.swim;
-    const zRange = zMax - zMin;
+    const { orbits, orbit, jump } = SETTINGS;
 
-    for (let i = 0; i < SETTINGS.count; i++) {
+    orbits.forEach((cfg, i) => {
         const mesh = createFishMesh();
 
-        // Cada peixe tem uma posição Z inicial diferente ao longo do rio
-        const zOffset = zMin + (i / SETTINGS.count) * zRange;
-        // Centro X do vale nesta posição Z (segue a curva)
-        const cxAtZ = getValeCenterXAtZ(zOffset, GROUND_SETTINGS.vale);
-        // Offset lateral fixo dentro do rio
-        const xOffset = (Math.random() * 2 - 1) * xSpread;
-        const speed = speedMin + Math.random() * (speedMax - speedMin);
-        const phaseOffset = Math.random() * Math.PI * 2;
-        // Direção inicial: metade vai para norte, metade para sul
-        const dir = i % 2 === 0 ? 1 : -1;
+        // Centro da elipse: X segue a curva do vale
+        const cx = getValeCenterXAtZ(cfg.z, GROUND_SETTINGS.vale);
 
-        // Timer para próximo salto
-        const nextJump = jumpInterval.min + Math.random() * (jumpInterval.max - jumpInterval.min);
+        const speed = orbit.speedMin + Math.random() * (orbit.speedMax - orbit.speedMin);
+        const phase = Math.random() * Math.PI * 2; // fase inicial diferente por peixe
+        const dir   = i % 2 === 0 ? 1 : -1;       // metade no sentido horário, metade anti
 
-        mesh.position.set(cxAtZ + xOffset, y, zOffset);
+        mesh.position.set(cx, orbit.yBase, cfg.z);
         scene.add(mesh);
 
         fishes.push({
-            mesh, speed, phaseOffset, xOffset, dir,
-            // Parâmetro t: posição normalizada no rio [0,1], mapeado para [zMin, zMax]
-            t: (zOffset - zMin) / zRange,
-            jumpTimer: nextJump,
+            mesh, cx, cz: cfg.z, speed, phase, dir,
+            angle: phase,
+            jumpTimer: jump.interval.min + Math.random() * (jump.interval.max - jump.interval.min),
             isJumping: false,
             jumpTime: 0,
         });
-    }
+    });
 }
 
 export function updateFish(delta) {
-    const { zMin, zMax, y } = SETTINGS.basin;
-    const { speedMin, wobbleAmpX, wobbleFreqX, jumpInterval, jumpHeight, jumpDuration } = SETTINGS.swim;
-    const zRange = zMax - zMin;
+    const { orbit, jump } = SETTINGS;
     const now = Date.now() * 0.001;
 
     for (const fish of fishes) {
-        const { mesh, speed, phaseOffset, xOffset } = fish;
+        const { mesh } = fish;
 
-        // ── Avançar t ao longo do rio ────────────────────────────────────────
-        fish.t += fish.dir * speed * delta / zRange;
+        // ── Avançar ângulo da elipse ─────────────────────────────────────────
+        fish.angle += fish.dir * fish.speed * delta;
 
-        // Inverter direção nas extremidades
-        if (fish.t >= 1.0) { fish.t = 1.0; fish.dir = -1; }
-        if (fish.t <= 0.0) { fish.t = 0.0; fish.dir =  1; }
+        const x = fish.cx + Math.cos(fish.angle) * orbit.radiusX;
+        const z = fish.cz + Math.sin(fish.angle) * orbit.radiusZ;
 
-        // Posição Z ao longo do rio
-        const z = zMin + fish.t * zRange;
-
-        // Centro X do vale nesta posição Z (segue a curva do vale)
-        const cxAtZ = getValeCenterXAtZ(z, GROUND_SETTINGS.vale);
-
-        // Oscilação lateral suave dentro do rio
-        const x = cxAtZ + xOffset + Math.sin(fish.t * Math.PI * 2 * wobbleFreqX + phaseOffset) * wobbleAmpX;
+        // Mergulho suave: Y oscila entre yBase e yDip com o ângulo
+        const yDip = orbit.yBase + (orbit.yDip - orbit.yBase) * (0.5 + 0.5 * Math.sin(fish.angle * 2));
 
         // ── Salto ────────────────────────────────────────────────────────────
         fish.jumpTimer -= delta;
-        let yPos = y;
+        let yPos = yDip;
 
         if (!fish.isJumping && fish.jumpTimer <= 0) {
             fish.isJumping = true;
-            fish.jumpTime = 0;
+            fish.jumpTime  = 0;
         }
-
         if (fish.isJumping) {
             fish.jumpTime += delta;
-            const progress = fish.jumpTime / jumpDuration;
-            if (progress >= 1.0) {
+            const p = fish.jumpTime / jump.duration;
+            if (p >= 1.0) {
                 fish.isJumping = false;
-                fish.jumpTimer = jumpInterval.min + Math.random() * (jumpInterval.max - jumpInterval.min);
+                fish.jumpTimer = jump.interval.min + Math.random() * (jump.interval.max - jump.interval.min);
             } else {
-                // Parábola: sobe e desce
-                yPos = y + Math.sin(progress * Math.PI) * jumpHeight;
+                yPos = orbit.yBase + Math.sin(p * Math.PI) * jump.height;
             }
         }
 
         mesh.position.set(x, yPos, z);
 
-        // Orientar o peixe na direção de movimento (Z + ligeira inclinação no salto)
-        mesh.rotation.y = fish.dir > 0 ? 0 : Math.PI;
-        if (fish.isJumping) {
-            const progress = fish.jumpTime / jumpDuration;
-            mesh.rotation.x = Math.sin(progress * Math.PI) * 0.4 * fish.dir;
-        } else {
-            mesh.rotation.x = 0;
-        }
+        // Orientar o peixe tangencialmente à elipse
+        const tx = -fish.dir * Math.sin(fish.angle) * orbit.radiusX;
+        const tz =  fish.dir * Math.cos(fish.angle) * orbit.radiusZ;
+        mesh.rotation.y = Math.atan2(tx, tz);
 
-        // Ondulação lateral do corpo
-        mesh.rotation.z = Math.sin(now * 4 + phaseOffset) * 0.12;
+        // Inclinação no salto
+        mesh.rotation.x = fish.isJumping
+            ? Math.sin(fish.jumpTime / jump.duration * Math.PI) * 0.5 * fish.dir
+            : 0;
+
+        // Ondulação lateral
+        mesh.rotation.z = Math.sin(now * 4 + fish.phase) * 0.12;
     }
 }
