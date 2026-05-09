@@ -34,9 +34,9 @@ const SETTINGS = {
     // ── Marcadores de chão ao longo do rio ──────────────────────────────────
     // Removido o marcador em z:-3.0 (sobrepunha-se à cascata)
     groundMarkers: [
-        { x: 1.2, z: 3.5 },
-        { x: 1.2, z: 2.0 },
-        { x: 1.2, z: 0.5 },
+        { x: 1.2, z:  3.5 },
+        { x: 1.2, z:  1.5 },
+        { x: 1.2, z: -0.5 },
     ],
     marker: {
         stakeHeight: 0.12,
@@ -45,8 +45,9 @@ const SETTINGS = {
         lightColor: 0xffeebb,
     },
     // ── Lanterna da tenda ────────────────────────────────────────────────────
+    // Tenda em {x:0, y:0.4, z:-2} — lanterna junto à entrada, baixa
     lantern: {
-        position: { x: 0.6, y: 1.6, z: -2.2 },
+        position: { x: 0.5, y: 0.55, z: -1.3 },
         lightIntensity: 0.9,
         lightRange: 2.5,
         lightColor: 0xffcc66,
@@ -103,22 +104,17 @@ function createGroundMarker(x, z) {
     return { group, light };
 }
 
-/** Cria a lanterna da tenda. */
+/** Cria a lanterna da tenda — bulbo esférico pequeno + luz pontual. */
 function createTentLantern() {
     const group = new THREE.Group();
     const { position, lightIntensity, lightRange, lightColor } = SETTINGS.lantern;
 
-    const body = new THREE.Mesh(
-        new THREE.BoxGeometry(0.08, 0.12, 0.08),
-        new THREE.MeshLambertMaterial({ color: 0x222222 })
+    // Bulbo esférico emissivo (sem caixa preta visível)
+    const bulb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 8, 8),
+        new THREE.MeshBasicMaterial({ color: lightColor })
     );
-    group.add(body);
-
-    const glass = new THREE.Mesh(
-        new THREE.BoxGeometry(0.06, 0.09, 0.06),
-        new THREE.MeshBasicMaterial({ color: lightColor, transparent: true, opacity: 0.7 })
-    );
-    group.add(glass);
+    group.add(bulb);
 
     const light = new THREE.PointLight(lightColor, lightIntensity, lightRange);
     group.add(light);
