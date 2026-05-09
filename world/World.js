@@ -10,6 +10,7 @@ import { createWater, WATER_SETTINGS } from '../entities/environment/Water.js';
 import { createFish } from '../entities/environment/Fish.js';
 import { createFireflies } from '../entities/environment/Fireflies.js';
 import { createFlowers } from '../entities/environment/Flowers.js';
+import { playCollect } from './SoundManager.js';
 
 /**
  * Constrói o mundo carregando todos os elementos da cena em paralelo.
@@ -53,7 +54,7 @@ export async function buildWorld(scene, raccoon, onProgress = null) {
     progress(85, 'Fauna criada...');
 
     // ── Flores: após floresta, mesmas zonas de exclusão ──────────────────────
-    await createFlowers(scene, exclusionZones);
+    await createFlowers(scene, exclusionZones, () => playCollect());
     progress(100, 'Pronto!');
 
     return {

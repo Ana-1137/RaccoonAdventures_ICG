@@ -148,6 +148,20 @@ export function updateFlowers(playerPos, delta) {
 
 export function getFlowerCount() { return { collected: _collected, total: _total }; }
 
+/** Retorna proximidade 0-1 à flor não coletada mais próxima (1 = em cima, 0 = fora do raio). */
+export function getNearestFlowerProximity(playerPos) {
+    const r = SETTINGS.sparkleRadius;
+    let minD2 = r * r;
+    for (const f of _flowers) {
+        if (f.collected) continue;
+        const dx = playerPos.x - f.mesh.position.x;
+        const dz = playerPos.z - f.mesh.position.z;
+        const d2 = dx * dx + dz * dz;
+        if (d2 < minD2) minD2 = d2;
+    }
+    return minD2 < r * r ? 1 - Math.sqrt(minD2) / r : 0;
+}
+
 function _inZone(x, z, zone) {
     if (zone.type === 'circle') {
         const dx = x - zone.x, dz = z - zone.z;
