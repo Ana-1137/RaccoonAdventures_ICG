@@ -6,20 +6,20 @@ const SETTINGS = {
     festoonStrings: [
         {
             // Varal 1: horizontal ao lado do acampamento (esquerda ↔ direita)
-            poleA: { x: -1.2, z:  0.5 },
-            poleB: { x:  1.2, z:  0.5 },
+            poleA: { x: -1.2, z:  2.5 },
+            poleB: { x:  1.2, z:  2.5 },
             poleHeight: 1.4,
         },
         {
             // Varal 2: vertical ao lado das árvores (norte ↔ sul), junto à floresta
-            poleA: { x: -2.0, z:  0.5 },
-            poleB: { x: -2.0, z: -2.0 },
+            poleA: { x: -2.0, z:  2.5 },
+            poleB: { x: -2.0, z:  0.0 },
             poleHeight: 1.4,
         },
         {
-            // Varal 3: horizontal mais abaixo, lado do rio (menos disperso)
-            poleA: { x:  0.5, z: -1.5 },
-            poleB: { x:  2.5, z: -1.5 },
+            // Varal 3: horizontal lado do rio
+            poleA: { x:  0.5, z:  0.5 },
+            poleB: { x:  2.5, z:  0.5 },
             poleHeight: 1.4,
         },
     ],
@@ -34,9 +34,9 @@ const SETTINGS = {
     // ── Marcadores de chão ao longo do rio ──────────────────────────────────
     // Removido o marcador em z:-3.0 (sobrepunha-se à cascata)
     groundMarkers: [
-        { x: 1.2, z:  1.5 },
-        { x: 1.2, z:  0.0 },
-        { x: 1.2, z: -1.5 },
+        { x: 1.2, z:  3.5 },
+        { x: 1.2, z:  2.0 },
+        { x: 1.2, z:  0.5 },
     ],
     marker: {
         stakeHeight: 0.12,
@@ -149,13 +149,27 @@ export function createStructureLights(scene) {
         scene.add(createFestoonPole(poleA.x, poleA.z, poleHeight));
         scene.add(createFestoonPole(poleB.x, poleB.z, poleHeight));
 
-        // Lâmpadas ao longo do varal com sag parabólico
+        // Fio + lâmpadas ao longo do varal com sag parabólico
         const n = festoon.bulbsPerString;
+        // Pontos do fio: poste A → lâmpadas → poste B (resolução maior para curva suave)
+        const wirePoints = [];
+        const wireSegments = 20;
+        for (let i = 0; i <= wireSegments; i++) {
+            const t = i / wireSegments;
+            const x = poleA.x + (poleB.x - poleA.x) * t;
+            const z = poleA.z + (poleB.z - poleA.z) * t;
+            const y = poleHeight - festoon.sag * 4 * t * (1 - t);
+            wirePoints.push(new THREE.Vector3(x, y, z));
+        }
+        const wireGeo = new THREE.BufferGeometry().setFromPoints(wirePoints);
+        const wireMat = new THREE.LineBasicMaterial({ color: 0x333333 });
+        scene.add(new THREE.Line(wireGeo, wireMat));
+
         for (let i = 1; i <= n; i++) {
             const t = i / (n + 1);
             const x = poleA.x + (poleB.x - poleA.x) * t;
             const z = poleA.z + (poleB.z - poleA.z) * t;
-            const y = poleHeight - festoon.sag * 4 * t * (1 - t); // parábola
+            const y = poleHeight - festoon.sag * 4 * t * (1 - t);
 
             const bulb = createBulb(festoon.bulbColor, festoon.bulbRadius);
             bulb.position.set(x, y, z);
