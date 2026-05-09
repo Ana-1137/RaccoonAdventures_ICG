@@ -63,15 +63,18 @@ function createFestoonPole(x, z, height) {
         new THREE.MeshLambertMaterial({ color: 0x5c3d1e })
     );
     mesh.position.set(x, height / 2, z);
+    mesh.raycast = () => {};  // sem colisão
     return mesh;
 }
 
 /** Cria um bulbo esférico de lâmpada festoon. */
 function createBulb(color, radius) {
-    return new THREE.Mesh(
+    const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(radius, 6, 6),
         new THREE.MeshBasicMaterial({ color })
     );
+    mesh.raycast = () => {};  // sem colisão
+    return mesh;
 }
 
 /** Cria um marcador de chão minúsculo (estaca + ponto de luz). */
@@ -201,12 +204,14 @@ export function createStructureLights(scene) {
     // ── 2. MARCADORES DE CHÃO ────────────────────────────────────────────────
     for (const cfg of groundMarkers) {
         const { group, light } = createGroundMarker(cfg.x, cfg.z);
+        group.traverse(o => { if (o.isMesh || o.isLine) o.raycast = () => {}; });
         scene.add(group);
         allLights.push(light);
     }
 
     // ── 3. LANTERNA DA TENDA ─────────────────────────────────────────────────
     const { group: lanternGroup, light: lanternLight } = createTentLantern();
+    lanternGroup.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
     scene.add(lanternGroup);
     allLights.push(lanternLight);
 
