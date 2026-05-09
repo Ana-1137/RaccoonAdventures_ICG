@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getValeCenterXAtZ, GROUND_SETTINGS } from '../../world/Ground.js';
 
 // ─── CONFIGURAÇÃO CENTRAL ────────────────────────────────────────────────────
 // O basin está em {cx:2.6, cz:0}, tamanho {w:3.2, h:9.3}
@@ -57,6 +58,8 @@ export function createFish(scene) {
 
         // Cada peixe tem uma posição Z inicial diferente ao longo do rio
         const zOffset = zMin + (i / SETTINGS.count) * zRange;
+        // Centro X do vale nesta posição Z (segue a curva)
+        const cxAtZ = getValeCenterXAtZ(zOffset, GROUND_SETTINGS.vale);
         // Offset lateral fixo dentro do rio
         const xOffset = (Math.random() * 2 - 1) * xSpread;
         const speed = speedMin + Math.random() * (speedMax - speedMin);
@@ -67,7 +70,7 @@ export function createFish(scene) {
         // Timer para próximo salto
         const nextJump = jumpInterval.min + Math.random() * (jumpInterval.max - jumpInterval.min);
 
-        mesh.position.set(cx + xOffset, y, zOffset);
+        mesh.position.set(cxAtZ + xOffset, y, zOffset);
         scene.add(mesh);
 
         fishes.push({
@@ -82,7 +85,7 @@ export function createFish(scene) {
 }
 
 export function updateFish(delta) {
-    const { cx, zMin, zMax, y } = SETTINGS.basin;
+    const { zMin, zMax, y } = SETTINGS.basin;
     const { speedMin, wobbleAmpX, wobbleFreqX, jumpInterval, jumpHeight, jumpDuration } = SETTINGS.swim;
     const zRange = zMax - zMin;
     const now = Date.now() * 0.001;
@@ -100,8 +103,11 @@ export function updateFish(delta) {
         // Posição Z ao longo do rio
         const z = zMin + fish.t * zRange;
 
-        // Oscilação lateral suave (simula curva do vale)
-        const x = cx + xOffset + Math.sin(fish.t * Math.PI * 2 * wobbleFreqX + phaseOffset) * wobbleAmpX;
+        // Centro X do vale nesta posição Z (segue a curva do vale)
+        const cxAtZ = getValeCenterXAtZ(z, GROUND_SETTINGS.vale);
+
+        // Oscilação lateral suave dentro do rio
+        const x = cxAtZ + xOffset + Math.sin(fish.t * Math.PI * 2 * wobbleFreqX + phaseOffset) * wobbleAmpX;
 
         // ── Salto ────────────────────────────────────────────────────────────
         fish.jumpTimer -= delta;
