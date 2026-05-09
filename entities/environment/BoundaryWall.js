@@ -105,12 +105,26 @@ export async function loadBoundaryWall(scene) {
     const dummy = new THREE.Object3D();
     const counters = new Array(instances.length).fill(0);
 
+    // Zonas de exclusão: pedras não podem estar perto das cascatas
+    const exclusions = [
+        { x: 0.7, z: -4.5, minDist: 2.5 },  // cascata1
+        { x: 4.9, z: -4.5, minDist: 2.5 },  // cascata2
+    ];
+
     for (let i = 0; i < count; i++) {
         const angle = startAngle + i * angleStep;
         const typeIdx = i % instances.length;
 
         const x = centerX + Math.cos(angle) * radius;
         const z = centerZ + Math.sin(angle) * radius;
+
+        // Saltar pedras demasiado perto das cascatas
+        const tooClose = exclusions.some(e => {
+            const dx = x - e.x, dz = z - e.z;
+            return Math.sqrt(dx * dx + dz * dz) < e.minDist;
+        });
+        if (tooClose) continue;
+
         const scale = scaleMin + Math.random() * (scaleMax - scaleMin);
 
         // A altura precisa ser ajustada dependendo se é rocha1 ou rocha2
