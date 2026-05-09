@@ -1,41 +1,43 @@
 import * as THREE from 'three';
 
 // ─── CONFIGURAÇÃO CENTRAL ────────────────────────────────────────────────────
+// O basin está em {cx:2.6, cz:0}, tamanho {w:3.2, h:9.3}
+// O vale tem uma curva — o centro X desloca-se ligeiramente ao longo do Z
+// Os peixes nadam ao longo do eixo Z (cima/baixo no rio) com oscilação em X
 const SETTINGS = {
     count: 6,
-    color: 0xf4a460,          // cor laranja-acastanhado
-    // Limites do basin: posição {x:2.6, z:0}, tamanho {w:3.2, h:9.3}
+    color: 0xf4a460,
     basin: {
-        cx: 2.6, cz: 0,
-        halfW: 1.3, halfD: 4.0,
-        y: -0.08,             // ligeiramente abaixo da superfície da água
+        cx: 2.6,          // centro X do rio
+        zMin: -4.0,       // limite sul do rio (perto das cascatas)
+        zMax:  4.0,       // limite norte do rio
+        y: -0.06,         // Y base (superfície da água)
+        xSpread: 0.6,     // variação lateral máxima em X
     },
-    speed: { min: 0.4, max: 0.9 },
-    turnSpeed: 1.2,           // rad/s de viragem máxima
-    avoidMargin: 0.25,        // margem antes das paredes para virar
+    swim: {
+        speedMin: 0.8,
+        speedMax: 1.6,
+        // Oscilação lateral (simula curva do vale)
+        wobbleAmpX: 0.3,
+        wobbleFreqX: 0.4,
+        // Salto fora de água
+        jumpInterval: { min: 4.0, max: 9.0 }, // segundos entre saltos
+        jumpHeight: 0.25,
+        jumpDuration: 0.5,  // segundos no ar
+    },
 };
 
-// ─── GEOMETRIA DO PEIXE ──────────────────────────────────────────────────────
-// Cone (corpo) + cone pequeno (cauda) — sem modelos externos
+// ─── GEOMETRIA ───────────────────────────────────────────────────────────────
 function createFishMesh() {
     const group = new THREE.Group();
-
     const mat = new THREE.MeshLambertMaterial({ color: SETTINGS.color });
 
-    // Corpo: cone apontado para +Z (direção de movimento)
-    const body = new THREE.Mesh(
-        new THREE.ConeGeometry(0.04, 0.18, 6),
-        mat
-    );
-    body.rotation.x = Math.PI / 2; // cone aponta para +Z
+    const body = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.18, 6), mat);
+    body.rotation.x = Math.PI / 2;
     group.add(body);
 
-    // Cauda: cone pequeno atrás
-    const tail = new THREE.Mesh(
-        new THREE.ConeGeometry(0.03, 0.08, 4),
-        mat
-    );
-    tail.rotation.x = -Math.PI / 2; // aponta para -Z
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.08, 4), mat);
+    tail.rotation.x = -Math.PI / 2;
     tail.position.z = -0.1;
     group.add(tail);
 
@@ -45,70 +47,95 @@ function createFishMesh() {
 // ─── ESTADO INTERNO ─────────────────────────────────────────────────────────
 const fishes = [];
 
-/**
- * Cria os peixes e adiciona-os à cena.
- * @param {THREE.Scene} scene
- */
 export function createFish(scene) {
-    const { cx, cz, halfW, halfD, y } = SETTINGS.basin;
+    const { cx, zMin, zMax, y, xSpread } = SETTINGS.basin;
+    const { speedMin, speedMax, jumpInterval } = SETTINGS.swim;
+    const zRange = zMax - zMin;
 
     for (let i = 0; i < SETTINGS.count; i++) {
         const mesh = createFishMesh();
 
-        // Posição aleatória dentro do basin
-        const px = cx + (Math.random() * 2 - 1) * (halfW - 0.1);
-        const pz = cz + (Math.random() * 2 - 1) * (halfD - 0.1);
-        mesh.position.set(px, y, pz);
+        // Cada peixe tem uma posição Z inicial diferente ao longo do rio
+        const zOffset = zMin + (i / SETTINGS.count) * zRange;
+        // Offset lateral fixo dentro do rio
+        const xOffset = (Math.random() * 2 - 1) * xSpread;
+        const speed = speedMin + Math.random() * (speedMax - speedMin);
+        const phaseOffset = Math.random() * Math.PI * 2;
+        // Direção inicial: metade vai para norte, metade para sul
+        const dir = i % 2 === 0 ? 1 : -1;
 
-        // Direção inicial aleatória (ângulo no plano XZ)
-        const angle = Math.random() * Math.PI * 2;
-        mesh.rotation.y = angle;
+        // Timer para próximo salto
+        const nextJump = jumpInterval.min + Math.random() * (jumpInterval.max - jumpInterval.min);
 
-        const speed = SETTINGS.speed.min + Math.random() * (SETTINGS.speed.max - SETTINGS.speed.min);
-        const phaseOffset = Math.random() * Math.PI * 2; // para ondulação do corpo
-
-        fishes.push({ mesh, speed, phaseOffset });
+        mesh.position.set(cx + xOffset, y, zOffset);
         scene.add(mesh);
+
+        fishes.push({
+            mesh, speed, phaseOffset, xOffset, dir,
+            // Parâmetro t: posição normalizada no rio [0,1], mapeado para [zMin, zMax]
+            t: (zOffset - zMin) / zRange,
+            jumpTimer: nextJump,
+            isJumping: false,
+            jumpTime: 0,
+        });
     }
 }
 
-/**
- * Atualiza o movimento dos peixes a cada frame.
- * Cada peixe nada em frente, ondula o corpo e vira ao aproximar-se das margens.
- * @param {number} delta
- */
 export function updateFish(delta) {
-    const { cx, cz, halfW, halfD, y, avoidMargin } = SETTINGS.basin;
+    const { cx, zMin, zMax, y } = SETTINGS.basin;
+    const { speedMin, wobbleAmpX, wobbleFreqX, jumpInterval, jumpHeight, jumpDuration } = SETTINGS.swim;
+    const zRange = zMax - zMin;
     const now = Date.now() * 0.001;
 
     for (const fish of fishes) {
-        const { mesh, speed, phaseOffset } = fish;
+        const { mesh, speed, phaseOffset, xOffset } = fish;
 
-        // Ondulação lateral do corpo (cauda a abanar)
-        mesh.rotation.z = Math.sin(now * 3 + phaseOffset) * 0.15;
+        // ── Avançar t ao longo do rio ────────────────────────────────────────
+        fish.t += fish.dir * speed * delta / zRange;
 
-        // Mover para a frente (direção local +Z do grupo)
-        const forward = new THREE.Vector3(0, 0, 1).applyEuler(mesh.rotation);
-        forward.y = 0;
-        forward.normalize();
+        // Inverter direção nas extremidades
+        if (fish.t >= 1.0) { fish.t = 1.0; fish.dir = -1; }
+        if (fish.t <= 0.0) { fish.t = 0.0; fish.dir =  1; }
 
-        mesh.position.addScaledVector(forward, speed * delta);
-        mesh.position.y = y; // manter na superfície da água
+        // Posição Z ao longo do rio
+        const z = zMin + fish.t * zRange;
 
-        // Deteção de margem e viragem suave
-        const dx = mesh.position.x - cx;
-        const dz = mesh.position.z - cz;
-        const nearWallX = Math.abs(dx) > halfW - avoidMargin;
-        const nearWallZ = Math.abs(dz) > halfD - avoidMargin;
+        // Oscilação lateral suave (simula curva do vale)
+        const x = cx + xOffset + Math.sin(fish.t * Math.PI * 2 * wobbleFreqX + phaseOffset) * wobbleAmpX;
 
-        if (nearWallX || nearWallZ) {
-            // Virar em direção ao centro
-            const toCenterAngle = Math.atan2(cx - mesh.position.x, cz - mesh.position.z);
-            let diff = toCenterAngle - mesh.rotation.y;
-            // Normalizar para [-PI, PI]
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            mesh.rotation.y += Math.sign(diff) * SETTINGS.turnSpeed * delta;
+        // ── Salto ────────────────────────────────────────────────────────────
+        fish.jumpTimer -= delta;
+        let yPos = y;
+
+        if (!fish.isJumping && fish.jumpTimer <= 0) {
+            fish.isJumping = true;
+            fish.jumpTime = 0;
         }
+
+        if (fish.isJumping) {
+            fish.jumpTime += delta;
+            const progress = fish.jumpTime / jumpDuration;
+            if (progress >= 1.0) {
+                fish.isJumping = false;
+                fish.jumpTimer = jumpInterval.min + Math.random() * (jumpInterval.max - jumpInterval.min);
+            } else {
+                // Parábola: sobe e desce
+                yPos = y + Math.sin(progress * Math.PI) * jumpHeight;
+            }
+        }
+
+        mesh.position.set(x, yPos, z);
+
+        // Orientar o peixe na direção de movimento (Z + ligeira inclinação no salto)
+        mesh.rotation.y = fish.dir > 0 ? 0 : Math.PI;
+        if (fish.isJumping) {
+            const progress = fish.jumpTime / jumpDuration;
+            mesh.rotation.x = Math.sin(progress * Math.PI) * 0.4 * fish.dir;
+        } else {
+            mesh.rotation.x = 0;
+        }
+
+        // Ondulação lateral do corpo
+        mesh.rotation.z = Math.sin(now * 4 + phaseOffset) * 0.12;
     }
 }
