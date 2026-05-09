@@ -4,14 +4,15 @@ import GUI from 'lil-gui';
  * Cria e configura o painel de controlo lil-GUI.
  * @param {Object} climate  - Sistema de clima (retornado por createClimate)
  * @param {Object} campfire - Fogueira (retornado por createCampfireLight)
+ * @param {Object} structureLights - Luzes estruturais (retornado por createStructureLights)
  * @returns {GUI} Instância do painel
  */
-function createDashboard(climate, campfire) {
+function createDashboard(climate, campfire, structureLights) {
     const gui = new GUI({ title: '🌞 Climate Dashboard' });
     gui.domElement.style.cssText = 'position:fixed;top:10px;right:10px;z-index:1000;';
 
     _buildTimeFolder(gui, climate);
-    _buildLightingFolder(gui, campfire);
+    _buildLightingFolder(gui, campfire, structureLights);
     _buildPerformanceFolder(gui);
 
     return gui;
@@ -41,11 +42,12 @@ function _buildTimeFolder(gui, climate) {
 }
 
 /**
- * Pasta de controlo da fogueira (luz + intensidade + alcance + cor).
+ * Pasta de controlo da fogueira e luzes estruturais.
  * @param {GUI}    gui
  * @param {Object} campfire
+ * @param {Object} structureLights
  */
-function _buildLightingFolder(gui, campfire) {
+function _buildLightingFolder(gui, campfire, structureLights) {
     const folder = gui.addFolder('💡 Iluminação');
     folder.open();
 
@@ -73,6 +75,17 @@ function _buildLightingFolder(gui, campfire) {
         .addColor(campfire.settings, 'color')
         .name('Cor')
         .onChange((value) => campfire.light.color.setStyle(value));
+
+    if (structureLights) {
+        folder
+            .add(structureLights.settings, 'enabled')
+            .name('Luzes Estruturais')
+            .onChange((value) => {
+                for (const light of structureLights.lights) {
+                    light.visible = value;
+                }
+            });
+    }
 }
 
 /**

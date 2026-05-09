@@ -12,6 +12,7 @@ import { updateWater }        from './entities/environment/Water.js';
 import { updateFish }         from './entities/environment/Fish.js';
 import { updateFireflies }    from './entities/environment/Fireflies.js';
 import { createCampfireLight } from './lights/CampfireLight.js';
+import { createStructureLights } from './lights/StructureLights.js';
 import { createDashboard }    from './ui/Dashboard.js';
 
 // ─── CENA, LUZES E CLIMA ─────────────────────────────────────────────────────
@@ -50,7 +51,8 @@ raccoon.modelLoaded.then(async () => {
     const world         = await buildWorld(scene, raccoon.model);
     const thirdPersonCamera = new ThirdPersonCamera(camera, raccoon.model, renderer.domElement, orbitControls);
     const campfire      = createCampfireLight(scene);
-    const dashboard     = createDashboard(climate, campfire);
+    const structureLights = createStructureLights(scene);
+    const dashboard     = createDashboard(climate, campfire, structureLights);
     const fpsDisplay    = dashboard._fpsDisplay;
 
     const clock = new THREE.Clock();
