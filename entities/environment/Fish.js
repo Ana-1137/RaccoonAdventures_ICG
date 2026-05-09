@@ -23,44 +23,65 @@ const SETTINGS = {
 };
 
 // ─── GEOMETRIA ───────────────────────────────────────────────────────────────
-// Cabeça: meia-esfera achatada
-// Corpo:  cilindro truncado (CylinderGeometry com raios diferentes)
-// Cauda:  pirâmide retangular (BoxGeometry deformada via vertices não — usamos ConeGeometry 4 lados achatado)
 function createFishMesh() {
-    const mat = new THREE.MeshLambertMaterial({ color: 0xe8935a });
-    const finMat = new THREE.MeshLambertMaterial({ color: 0xc0623a });
+    const bodyColor = 0xf4a460;
+    const finColor  = 0xe07840;
     const group = new THREE.Group();
+    const depth = 0.04; // espessura de extrusão (peixe achatado)
 
-    // Cabeça: meia-esfera achatada (SphereGeometry com phiLength = PI/2, escala Y reduzida)
-    const head = new THREE.Mesh(
-        new THREE.SphereGeometry(0.028, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
-        mat
-    );
-    head.rotation.x = -Math.PI / 2; // abre para trás (+Z)
-    head.position.z =  0.055;
-    head.scale.y = 0.6;
-    group.add(head);
-
-    // Corpo: cone truncado (frente mais largo, trás mais estreito)
-    const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.014, 0.026, 0.10, 7),
-        mat
-    );
-    body.rotation.x = Math.PI / 2;
-    body.position.z = 0.0;
+    // ── Corpo: elipse oval ──────────────────────────────────────────────────
+    const bodyShape = new THREE.Shape();
+    const bW = 0.09, bH = 0.045; // semi-eixos da elipse
+    bodyShape.absellipse(0, 0, bW, bH, 0, Math.PI * 2);
+    const bodyGeo = new THREE.ExtrudeGeometry(bodyShape, { depth, bevelEnabled: false });
+    const body = new THREE.Mesh(bodyGeo, new THREE.MeshLambertMaterial({ color: bodyColor }));
+    body.position.z = -depth / 2;
     group.add(body);
 
-    // Cauda: pirâmide retangular achatada (4 lados, escala X > Y)
-    const tail = new THREE.Mesh(
-        new THREE.ConeGeometry(0.028, 0.055, 4),
-        finMat
-    );
-    tail.rotation.x = -Math.PI / 2; // aponta para -Z
-    tail.rotation.z =  Math.PI / 4; // rodar 45° para ficar em losango
-    tail.scale.x = 1.6;             // achatar horizontalmente
-    tail.scale.y = 0.5;
-    tail.position.z = -0.07;
+    // ── Cauda: dois triângulos formando um crescente ─────────────────────────
+    const tailShape = new THREE.Shape();
+    tailShape.moveTo(0,  0);
+    tailShape.lineTo(-0.055,  0.045);
+    tailShape.lineTo(-0.03,   0);
+    tailShape.lineTo(-0.055, -0.045);
+    tailShape.closePath();
+    const tailGeo = new THREE.ExtrudeGeometry(tailShape, { depth, bevelEnabled: false });
+    const tail = new THREE.Mesh(tailGeo, new THREE.MeshLambertMaterial({ color: finColor }));
+    tail.position.set(-bW, 0, -depth / 2);
     group.add(tail);
+
+    // ── Barbatana dorsal: triângulo no topo ──────────────────────────────────
+    const dorsalShape = new THREE.Shape();
+    dorsalShape.moveTo(-0.02, 0);
+    dorsalShape.lineTo( 0.03, 0);
+    dorsalShape.lineTo( 0.01, 0.04);
+    dorsalShape.closePath();
+    const dorsal = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(dorsalShape, { depth: depth * 0.6, bevelEnabled: false }),
+        new THREE.MeshLambertMaterial({ color: finColor })
+    );
+    dorsal.position.set(0, bH, -depth * 0.3);
+    group.add(dorsal);
+
+    // ── Barbatana peitoral: oval achatado lateral ────────────────────────────
+    const pectShape = new THREE.Shape();
+    pectShape.absellipse(0, 0, 0.03, 0.015, 0, Math.PI * 2);
+    const pectoral = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(pectShape, { depth: 0.005, bevelEnabled: false }),
+        new THREE.MeshLambertMaterial({ color: finColor })
+    );
+    pectoral.position.set(0.02, -bH * 0.3, depth / 2);
+    pectoral.rotation.x = Math.PI / 6;
+    group.add(pectoral);
+
+    // ── Olho: círculo pequeno ────────────────────────────────────────────────
+    const eyeGeo = new THREE.CircleGeometry(0.010, 8);
+    const eye = new THREE.Mesh(eyeGeo, new THREE.MeshBasicMaterial({ color: 0x111111 }));
+    eye.position.set(0.055, 0.012, depth / 2 + 0.001);
+    group.add(eye);
+
+    // Orientar o grupo: peixe aponta para +Z (frente)
+    group.rotation.y = Math.PI / 2;
 
     return group;
 }
