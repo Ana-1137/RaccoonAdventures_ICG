@@ -10,6 +10,7 @@ import { keyStates }          from './controls/KeyboardControls.js';
 import { update as updateForest } from './entities/environment/Forest.js';
 import { updateWater }        from './entities/environment/Water.js';
 import { updateFish }         from './entities/environment/Fish.js';
+import { updateFireflies }    from './entities/environment/Fireflies.js';
 import { createCampfireLight } from './lights/CampfireLight.js';
 import { createDashboard }    from './ui/Dashboard.js';
 
@@ -74,6 +75,7 @@ raccoon.modelLoaded.then(async () => {
 
         if (world.basin) updateWater(world.basin, delta);
         updateFish(delta);
+        updateFireflies(delta, climate.getHour());
 
         thirdPersonCamera.update(isMoving, orbitControls, isRunning);
         orbitControls.update();

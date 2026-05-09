@@ -8,6 +8,7 @@ import { loadWaterfalls, SETTINGS as WATERFALLS_SETTINGS } from '../entities/env
 import { loadBoundaryWall } from '../entities/environment/BoundaryWall.js';
 import { createWater, WATER_SETTINGS } from '../entities/environment/Water.js';
 import { createFish } from '../entities/environment/Fish.js';
+import { createFireflies } from '../entities/environment/Fireflies.js';
 
 /**
  * Constrói o mundo carregando todos os elementos da cena em paralelo.
@@ -41,6 +42,7 @@ export async function buildWorld(scene, raccoon) {
     ]);
 
     createFish(scene);
+    createFireflies(scene);
 
     return {
         groundMesh,
