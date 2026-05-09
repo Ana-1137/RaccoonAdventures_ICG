@@ -32,11 +32,11 @@ const SETTINGS = {
         sag: 0.3,
     },
     // ── Marcadores de chão ao longo do rio ──────────────────────────────────
-    // Removido o marcador em z:-3.0 (sobrepunha-se à cascata)
+    // x: 0.8 — na margem esquerda do rio, fora da depressão do vale
     groundMarkers: [
-        { x: 1.2, z:  3.5 },
-        { x: 1.2, z:  1.5 },
-        { x: 1.2, z: -0.5 },
+        { x: 0.8, z:  3.5 },
+        { x: 0.8, z:  1.5 },
+        { x: 0.8, z: -0.2 },
     ],
     marker: {
         stakeHeight: 0.12,
@@ -45,9 +45,9 @@ const SETTINGS = {
         lightColor: 0xffeebb,
     },
     // ── Lanterna da tenda ────────────────────────────────────────────────────
-    // Tenda em {x:0, y:0.4, z:-2} — lanterna junto à entrada, baixa
+    // Tenda em {x:0, y:0.4, z:-2}, escala 0.8 — lanterna à entrada
     lantern: {
-        position: { x: 0.5, y: 0.55, z: -1.3 },
+        position: { x: 0.4, y: 0.5, z: -1.5 },
         lightIntensity: 0.9,
         lightRange: 2.5,
         lightColor: 0xffcc66,
@@ -104,19 +104,39 @@ function createGroundMarker(x, z) {
     return { group, light };
 }
 
-/** Cria a lanterna da tenda — bulbo esférico pequeno + luz pontual. */
+/** Cria a lanterna da tenda — base + corpo de vidro + telhado piramidal + bulbo. */
 function createTentLantern() {
     const group = new THREE.Group();
     const { position, lightIntensity, lightRange, lightColor } = SETTINGS.lantern;
+    const frameMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+    const glassMat = new THREE.MeshBasicMaterial({ color: lightColor, transparent: true, opacity: 0.55 });
 
-    // Bulbo esférico emissivo (sem caixa preta visível)
+    // Base
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.02, 0.10), frameMat);
+    base.position.y = 0;
+    group.add(base);
+
+    // Corpo retangular de vidro
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.10, 0.08), glassMat);
+    body.position.y = 0.06;
+    group.add(body);
+
+    // Telhado piramidal (ConeGeometry com 4 lados)
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.06, 4), frameMat);
+    roof.position.y = 0.14;
+    roof.rotation.y = Math.PI / 4; // alinhar arestas com o corpo
+    group.add(roof);
+
+    // Bulbo interior
     const bulb = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05, 8, 8),
+        new THREE.SphereGeometry(0.025, 6, 6),
         new THREE.MeshBasicMaterial({ color: lightColor })
     );
+    bulb.position.y = 0.06;
     group.add(bulb);
 
     const light = new THREE.PointLight(lightColor, lightIntensity, lightRange);
+    light.position.y = 0.06;
     group.add(light);
 
     group.position.set(position.x, position.y, position.z);
