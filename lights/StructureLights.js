@@ -6,20 +6,20 @@ const SETTINGS = {
     festoonStrings: [
         {
             // Varal 1: horizontal ao lado do acampamento (esquerda ↔ direita)
-            poleA: { x: -1.2, z:  2.5 },
-            poleB: { x:  1.2, z:  2.5 },
+            poleA: { x: -1.5, z: 3.7 },
+            poleB: { x: 0.4, z: 3.7 },
             poleHeight: 1.4,
         },
         {
             // Varal 2: vertical ao lado das árvores (norte ↔ sul), junto à floresta
-            poleA: { x: -2.0, z:  2.5 },
-            poleB: { x: -2.0, z:  0.0 },
+            poleA: { x: -2.0, z: 2.5 },
+            poleB: { x: -2.0, z: 0.0 },
             poleHeight: 1.4,
         },
         {
             // Varal 3: horizontal lado do rio
-            poleA: { x:  1.0, z:  0.5 },
-            poleB: { x:  4.2, z:  0.5 },
+            poleA: { x: 1.7, z: 0.5 },
+            poleB: { x: 4.2, z: 0.5 },
             poleHeight: 1.4,
         },
     ],
@@ -34,9 +34,9 @@ const SETTINGS = {
     // ── Marcadores de chão ao longo do rio ──────────────────────────────────
     // Removido o marcador em z:-3.0 (sobrepunha-se à cascata)
     groundMarkers: [
-        { x: 1.2, z:  3.5 },
-        { x: 1.2, z:  2.0 },
-        { x: 1.2, z:  0.5 },
+        { x: 1.2, z: 3.5 },
+        { x: 1.2, z: 2.0 },
+        { x: 1.2, z: 0.5 },
     ],
     marker: {
         stakeHeight: 0.12,
