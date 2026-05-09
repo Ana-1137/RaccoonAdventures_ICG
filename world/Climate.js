@@ -121,8 +121,8 @@ export function createClimate(scene, sunLight, ambientLight) {
             const { distance } = SETTINGS.sun;
             
             // Converter hora (0-24) para ângulo (0-2π)
-            // 0h está no leste, 12h no oeste (180°)
-            const dayProgress = (hour / 24) * Math.PI * 2;
+            // Subtrair π/2 para que o máximo (meio-dia) seja às 12h
+            const dayProgress = (hour / 24) * Math.PI * 2 - Math.PI / 2;
             
             // ── Sol ──
             // Elevação: máxima ao meio-dia (12h), mais baixa em 6h e 18h
@@ -170,7 +170,7 @@ export function createClimate(scene, sunLight, ambientLight) {
             const { min: ambientIntensityMin, max: ambientIntensityMax } = SETTINGS.ambient.intensity;
             
             // Converter hora para ângulo (0-24h → 0-2π)
-            const dayProgress = (hour / 24) * Math.PI * 2;
+            const dayProgress = (hour / 24) * Math.PI * 2 - Math.PI / 2;
             
             // Elevação do sol: máxima ao meio-dia (sin(dayProgress) = 1 em 12h)
             const sunElevation = Math.sin(dayProgress);
@@ -196,7 +196,7 @@ export function createClimate(scene, sunLight, ambientLight) {
             const { time: { hour }, sky } = SETTINGS;
             
             // Converter hora para ângulo (0-24h → 0-2π)
-            const dayProgress = (hour / 24) * Math.PI * 2;
+            const dayProgress = (hour / 24) * Math.PI * 2 - Math.PI / 2;
             
             // Elevação do sol para determinar cor do céu
             const sunElevation = Math.sin(dayProgress);
@@ -273,6 +273,12 @@ export function createClimate(scene, sunLight, ambientLight) {
             const hours = Math.floor(this.settings.time.hour);
             const minutes = Math.floor((this.settings.time.hour % 1) * 60);
             return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        },
+
+        /** @returns {boolean} true se for noite (hora >= 18 ou hora < 6) */
+        isNight() {
+            const h = SETTINGS.time.hour;
+            return h >= 18 || h < 6;
         },
     };
     

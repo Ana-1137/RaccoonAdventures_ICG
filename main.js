@@ -69,6 +69,12 @@ raccoon.modelLoaded.then(async () => {
         climate.update(delta);
         climate._guiTimeDisplay.time = climate.getTimeFormatted();
 
+        // Luzes estruturais: acendem à noite, apagam de dia (se enabled no dashboard)
+        if (structureLights.settings.enabled) {
+            const night = climate.isNight();
+            for (const light of structureLights.lights) light.visible = night;
+        }
+
         // Passar posição do raccoon para LOD de distância das partículas
         campfire.update(raccoon.model.position, delta);
 
