@@ -18,8 +18,8 @@ const SETTINGS = {
         },
         {
             // Varal 3: horizontal lado do rio
-            poleA: { x:  0.5, z:  0.5 },
-            poleB: { x:  2.5, z:  0.5 },
+            poleA: { x:  1.0, z:  0.5 },
+            poleB: { x:  4.2, z:  0.5 },
             poleHeight: 1.4,
         },
     ],
