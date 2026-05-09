@@ -7,12 +7,13 @@ import GUI from 'lil-gui';
  * @param {Object} structureLights - Luzes estruturais (retornado por createStructureLights)
  * @returns {GUI} Instância do painel
  */
-function createDashboard(climate, campfire, structureLights) {
+function createDashboard(climate, campfire, structureLights, scene) {
     const gui = new GUI({ title: '🌞 Climate Dashboard' });
     gui.domElement.style.cssText = 'position:fixed;top:10px;right:10px;z-index:1000;';
 
     _buildTimeFolder(gui, climate);
     _buildLightingFolder(gui, campfire, structureLights);
+    if (scene) _buildFogFolder(gui, scene);
     _buildPerformanceFolder(gui);
 
     return gui;
@@ -86,6 +87,24 @@ function _buildLightingFolder(gui, campfire, structureLights) {
                 }
             });
     }
+}
+
+/**
+ * Pasta de controlo do nevoeiro.
+ * @param {GUI}          gui
+ * @param {THREE.Scene}  scene
+ */
+function _buildFogFolder(gui, scene) {
+    const folder = gui.addFolder('🌫 Nevoeiro');
+
+    const fogSettings = { density: 0.0 };
+
+    folder
+        .add(fogSettings, 'density', 0, 0.15, 0.005)
+        .name('Densidade')
+        .onChange((value) => {
+            scene.fog.density = value;
+        });
 }
 
 /**

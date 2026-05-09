@@ -52,7 +52,7 @@ raccoon.modelLoaded.then(async () => {
     const thirdPersonCamera = new ThirdPersonCamera(camera, raccoon.model, renderer.domElement, orbitControls);
     const campfire      = createCampfireLight(scene);
     const structureLights = createStructureLights(scene);
-    const dashboard     = createDashboard(climate, campfire, structureLights);
+    const dashboard     = createDashboard(climate, campfire, structureLights, scene);
     const fpsDisplay    = dashboard._fpsDisplay;
 
     const clock = new THREE.Clock();

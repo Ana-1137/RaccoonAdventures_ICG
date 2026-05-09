@@ -229,6 +229,8 @@ export function createClimate(scene, sunLight, ambientLight) {
             }
             
             this.scene.background = targetColor;
+            // Sincronizar cor do nevoeiro com o céu
+            if (this.scene.fog) this.scene.fog.color.copy(targetColor);
         },
         
         /**

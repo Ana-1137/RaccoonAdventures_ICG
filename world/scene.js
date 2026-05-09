@@ -10,8 +10,8 @@ function createScene() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87CEEB); // Cor do céu (azul claro inicial)
 
-    // TODO: Adicionar nevoeiro (fog) aqui mais tarde
-    // scene.fog = new THREE.Fog(0xcccccc, 10, 50);
+    // Nevoeiro exponencial — densidade 0 por defeito, controlável pelo Dashboard
+    scene.fog = new THREE.FogExp2(0x87CEEB, 0.0);
 
     return scene;
 }
