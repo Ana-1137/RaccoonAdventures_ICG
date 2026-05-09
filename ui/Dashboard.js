@@ -14,8 +14,7 @@ function createDashboard(climate, campfire, structureLights, scene) {
 
     _buildTimeFolder(gui, climate);
     _buildLightingFolder(gui, campfire, structureLights);
-    if (scene) _buildFogFolder(gui, scene);
-    _buildClimateFolder(gui);
+    _buildClimaFolder(gui, scene);
     _buildPerformanceFolder(gui);
 
     return gui;
@@ -90,32 +89,24 @@ function _buildLightingFolder(gui, campfire, structureLights) {
 }
 
 /**
- * Pasta de controlo do nevoeiro.
+ * Pasta de controlo do clima: nevoeiro e chuva.
  * @param {GUI}          gui
  * @param {THREE.Scene}  scene
  */
-function _buildFogFolder(gui, scene) {
-    const folder = gui.addFolder('🌫 Nevoeiro');
-
-    const fogSettings = { density: 0.0 };
-
-    folder
-        .add(fogSettings, 'density', 0, 0.15, 0.005)
-        .name('Densidade')
-        .onChange((value) => {
-            scene.fog.density = value;
-        });
-}
-
-/**
- * Pasta de controlo do clima (chuva).
- * @param {GUI} gui
- */
-function _buildClimateFolder(gui) {
+function _buildClimaFolder(gui, scene) {
     const folder = gui.addFolder('🌦 Clima');
-    const settings = { rain: 0 };
+
+    if (scene?.fog) {
+        const fogSettings = { density: 0.0 };
+        folder
+            .add(fogSettings, 'density', 0, 0.15, 0.005)
+            .name('Nevoeiro')
+            .onChange((value) => { scene.fog.density = value; });
+    }
+
+    const rainSettings = { rain: 0 };
     folder
-        .add(settings, 'rain', 0, 1, 0.05)
+        .add(rainSettings, 'rain', 0, 1, 0.05)
         .name('Chuva')
         .onChange(setRainIntensity);
 }
