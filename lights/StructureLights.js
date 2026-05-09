@@ -34,9 +34,9 @@ const SETTINGS = {
     // ── Marcadores de chão ao longo do rio ──────────────────────────────────
     // x: 0.8 — na margem esquerda do rio, fora da depressão do vale
     groundMarkers: [
-        { x: 0.8, z:  3.5 },
-        { x: 0.8, z:  1.5 },
-        { x: 0.8, z: -0.2 },
+        { x: 0.8, z: 3.5 },
+        { x: 1.8, z: 1.5 },
+        { x: 2.0, z: -2.2 },
     ],
     marker: {
         stakeHeight: 0.12,
@@ -47,8 +47,8 @@ const SETTINGS = {
     // ── Lanterna da tenda ────────────────────────────────────────────────────
     // Tenda em {x:0, y:0.4, z:-2}, escala 0.8 — lanterna à entrada
     lantern: {
-        position: { x: 0.4, y: 0.5, z: -1.5 },
-        lightIntensity: 0.9,
+        position: { x: -0.2, y: 0.08, z: -2.2w },
+        lightIntensity: 0.6,
         lightRange: 2.5,
         lightColor: 0xffcc66,
     },
