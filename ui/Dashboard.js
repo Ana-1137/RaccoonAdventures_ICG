@@ -1,5 +1,6 @@
 import GUI from 'lil-gui';
 import { setRainIntensity } from '../world/Rain.js';
+import { setAudioEnabled, setMasterVolume, getMasterVolume } from '../world/SoundManager.js';
 
 /**
  * Cria e configura o painel de controlo lil-GUI.
@@ -15,6 +16,7 @@ function createDashboard(climate, campfire, structureLights, scene) {
     _buildTimeFolder(gui, climate);
     _buildLightingFolder(gui, campfire, structureLights);
     _buildClimaFolder(gui, scene);
+    _buildSoundFolder(gui);
     _buildPerformanceFolder(gui);
 
     return gui;
@@ -109,6 +111,17 @@ function _buildClimaFolder(gui, scene) {
         .add(rainSettings, 'rain', 0, 1, 0.05)
         .name('Chuva')
         .onChange(setRainIntensity);
+}
+
+/**
+ * Pasta de controlo de áudio.
+ * @param {GUI} gui
+ */
+function _buildSoundFolder(gui) {
+    const folder = gui.addFolder('🔊 Sons');
+    const settings = { enabled: true, volume: getMasterVolume() };
+    folder.add(settings, 'enabled').name('Ativar Som').onChange(setAudioEnabled);
+    folder.add(settings, 'volume', 0, 1, 0.05).name('Volume').onChange(setMasterVolume);
 }
 
 /**

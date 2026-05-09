@@ -12,11 +12,12 @@ import { update as updateForest } from './entities/environment/Forest.js';
 import { updateWater }        from './entities/environment/Water.js';
 import { updateFish }         from './entities/environment/Fish.js';
 import { updateFireflies }    from './entities/environment/Fireflies.js';
-import { updateFlowers, getFlowerCount } from './entities/environment/Flowers.js';
+import { updateFlowers, getFlowerCount, getNearestFlowerProximity } from './entities/environment/Flowers.js';
 import { createCampfireLight } from './lights/CampfireLight.js';
 import { createStructureLights } from './lights/StructureLights.js';
 import { createDashboard }    from './ui/Dashboard.js';
 import { createRain, updateRain } from './world/Rain.js';
+import { initSounds, updateAmbient, updateShine, getRainIntensity } from './world/SoundManager.js';
 
 // ─── LOADING SCREEN ──────────────────────────────────────────────────────────
 const _loadingScreen = document.getElementById('loading-screen');
@@ -67,6 +68,11 @@ orbitControls.mouseButtons   = { LEFT: 0, MIDDLE: 1, RIGHT: 0 };
 
 // ─── CHUVA ───────────────────────────────────────────────────────────────────
 createRain(scene);
+
+// ─── ÁUDIO — inicia após primeira interação (política do browser) ─────────────
+const _startAudio = () => { initSounds(); window.removeEventListener('pointerdown', _startAudio); window.removeEventListener('keydown', _startAudio); };
+window.addEventListener('pointerdown', _startAudio);
+window.addEventListener('keydown', _startAudio);
 
 // ─── CONTADOR DE FLORES (HUD) ────────────────────────────────────────────────
 const _flowerHUD = document.createElement('div');
@@ -130,6 +136,10 @@ raccoon.modelLoaded.then(async () => {
         const collected = updateFlowers(raccoon.model.position, delta);
         const { total } = getFlowerCount();
         _flowerHUD.textContent = `🌸 ${collected} / ${total}`;
+
+        // Áudio
+        updateAmbient(climate.getHour(), getRainIntensity());
+        updateShine(getNearestFlowerProximity(raccoon.model.position));
 
         thirdPersonCamera.update(isMoving, orbitControls, isRunning);
         orbitControls.update();
