@@ -7,6 +7,7 @@ import { buildWorld }         from './world/World.js';
 import { Raccoon }            from './entities/player/Raccoon.js';
 import { ThirdPersonCamera }  from './controls/ThirdPersonCamera.js';
 import { keyStates }          from './controls/KeyboardControls.js';
+import { createTouchControls } from './controls/TouchControls.js';
 import { update as updateForest } from './entities/environment/Forest.js';
 import { updateWater }        from './entities/environment/Water.js';
 import { updateFish }         from './entities/environment/Fish.js';
@@ -30,6 +31,9 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
 document.getElementById('Tag3DScene').appendChild(renderer.domElement);
+
+// Controlos tácteis (só activos em dispositivos touch)
+createTouchControls(keyStates);
 
 // ─── ORBIT CONTROLS ──────────────────────────────────────────────────────────
 // HACK: proxy que ignora Shift nos eventos de rato para não bloquear rotação
