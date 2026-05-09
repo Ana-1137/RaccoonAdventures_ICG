@@ -309,7 +309,6 @@ class Raccoon {
         // Se o currentState for inválido, resetar para IDLE (proteção contra estados corrompidos)
         const validStates = Object.values(STATES);
         if (!validStates.includes(this.currentState)) {
-            console.warn(`Estado inválido detetado: ${this.currentState}, resetando para IDLE`);
             this.currentState = STATES.IDLE;
             this.fadeToAction('idle', 0.2);
         }
@@ -323,7 +322,6 @@ class Raccoon {
             this.stuckTimer += delta;
             // Se estiver preso há mais de 2 segundos, fazer reset para IDLE
             if (this.stuckTimer > 2.0) {
-                console.warn(`Estado preso detetado: ${this.currentState}, resetando para IDLE`);
                 this.currentState = STATES.IDLE;
                 this.fadeToAction('idle', 0.3);
                 this.stuckTimer = 0;
@@ -837,31 +835,23 @@ class Raccoon {
             // Buffer de estabilidade: se já estivermos com medo, aceitamos uma profundidade menor
             const threshold = (this.currentState === STATES.TERRIFIED) ? (SETTINGS.physics.ledgeDepth * 0.8) : SETTINGS.physics.ledgeDepth;
             
-            // DEBUG
-            if (isMoving) {
-                console.log(`🔍 Ledge Detection: depth=${depth.toFixed(2)}, threshold=${threshold.toFixed(2)}, isAboveThreshold=${isAboveThreshold}, pos.y=${this.model.position.y.toFixed(2)}, state=${this.currentState}`);
-            }
-            
             if (depth > threshold) {
                 scaryDepth = true;
             }
         } else {
             scaryDepth = true; // Precipício total
-            console.log(`⚠️ Precipício total detetado! pos.y=${this.model.position.y.toFixed(2)}, threshold=${SETTINGS.terrified.heightThreshold}`);
         }
 
         // Se houver abismo E estiver muito alto, ativamos o medo
         // (precisa de ambas as condições: altura + edge à frente)
         if (scaryDepth && isAboveThreshold) {
             if (this.currentState !== STATES.TERRIFIED && this.currentState !== STATES.TERRIFIED_LOOP) {
-                console.log(`😱 MEDO ATIVADO! scaryDepth=${scaryDepth}, isAboveThreshold=${isAboveThreshold}, state=${this.currentState}`);
                 this.currentState = STATES.TERRIFIED;
                 this.fadeToAction('terrified_loop', SETTINGS.blend.toTerrified);
             }
         } else if (this.currentState === STATES.TERRIFIED || this.currentState === STATES.TERRIFIED_LOOP) {
             // Sai do medo se: não há abismo à frente OU desceu abaixo do threshold
             if (!scaryDepth || !isAboveThreshold) {
-                console.log(`😌 Saiu do medo. scaryDepth=${scaryDepth}, isAboveThreshold=${isAboveThreshold}`);
                 this.currentState = STATES.IDLE;
                 this.fadeToAction('idle', SETTINGS.blend.toIdle);
             }
