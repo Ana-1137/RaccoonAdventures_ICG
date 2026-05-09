@@ -12,9 +12,26 @@ import { update as updateForest } from './entities/environment/Forest.js';
 import { updateWater }        from './entities/environment/Water.js';
 import { updateFish }         from './entities/environment/Fish.js';
 import { updateFireflies }    from './entities/environment/Fireflies.js';
+import { updateFlowers, getFlowerCount } from './entities/environment/Flowers.js';
 import { createCampfireLight } from './lights/CampfireLight.js';
 import { createStructureLights } from './lights/StructureLights.js';
 import { createDashboard }    from './ui/Dashboard.js';
+import { createRain, updateRain } from './world/Rain.js';
+
+// ─── LOADING SCREEN ──────────────────────────────────────────────────────────
+const _loadingScreen = document.getElementById('loading-screen');
+const _loadingBar    = document.getElementById('loading-bar');
+const _loadingMsg    = document.getElementById('loading-msg');
+
+function setProgress(pct, msg) {
+    _loadingBar.style.width = `${pct}%`;
+    if (msg) _loadingMsg.textContent = msg;
+}
+
+function hideLoading() {
+    _loadingScreen.classList.add('hidden');
+    setTimeout(() => { _loadingScreen.style.display = 'none'; }, 700);
+}
 
 // ─── CENA, LUZES E CLIMA ─────────────────────────────────────────────────────
 const scene = createScene();
@@ -48,11 +65,26 @@ orbitControls.maxPolarAngle  = Math.PI / 1.5;
 orbitControls.target.set(0, 0, 0);
 orbitControls.mouseButtons   = { LEFT: 0, MIDDLE: 1, RIGHT: 0 };
 
+// ─── CHUVA ───────────────────────────────────────────────────────────────────
+createRain(scene);
+
+// ─── CONTADOR DE FLORES (HUD) ────────────────────────────────────────────────
+const _flowerHUD = document.createElement('div');
+_flowerHUD.style.cssText = 'position:fixed;bottom:16px;left:16px;color:#fff;font-family:sans-serif;font-size:1rem;text-shadow:0 1px 3px #000;pointer-events:none;';
+_flowerHUD.textContent = '🌸 0 / 0';
+document.body.appendChild(_flowerHUD);
+
 // ─── GUAXINIM ────────────────────────────────────────────────────────────────
 const raccoon = new Raccoon(scene);
 
 raccoon.modelLoaded.then(async () => {
-    const world         = await buildWorld(scene, raccoon.model);
+    setProgress(5, 'Guaxinim carregado...');
+    const world = await buildWorld(scene, raccoon.model, setProgress);
+    hideLoading();
+
+    const { total } = getFlowerCount();
+    _flowerHUD.textContent = `🌸 0 / ${total}`;
+
     const thirdPersonCamera = new ThirdPersonCamera(camera, raccoon.model, renderer.domElement, orbitControls);
     const campfire      = createCampfireLight(scene);
     const structureLights = createStructureLights(scene);
@@ -90,6 +122,14 @@ raccoon.modelLoaded.then(async () => {
         if (world.basin) updateWater(world.basin, delta);
         updateFish(delta);
         updateFireflies(delta, climate.getHour());
+
+        // Chuva — centrada na câmara
+        updateRain(delta, camera.position);
+
+        // Flores — coleta por proximidade
+        const collected = updateFlowers(raccoon.model.position);
+        const { total } = getFlowerCount();
+        _flowerHUD.textContent = `🌸 ${collected} / ${total}`;
 
         thirdPersonCamera.update(isMoving, orbitControls, isRunning);
         orbitControls.update();

@@ -13,6 +13,35 @@
             touch-action: none; /* previne scroll/zoom do browser em touch */
         }
         #Tag3DScene { width: 100vw; height: 100vh; display: block; }
+
+        #loading-screen {
+            position: fixed; inset: 0;
+            background: #0a1a0a;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease;
+        }
+        #loading-screen.hidden { opacity: 0; pointer-events: none; }
+        #loading-screen h1 {
+            color: #c8e6a0; font-family: sans-serif;
+            font-size: clamp(1.4rem, 4vw, 2.2rem);
+            margin: 0 0 1.2rem; letter-spacing: 0.05em;
+        }
+        #loading-bar-wrap {
+            width: min(320px, 70vw); height: 6px;
+            background: #1e3a1e; border-radius: 3px; overflow: hidden;
+        }
+        #loading-bar {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #4caf50, #a5d6a7);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        #loading-msg {
+            color: #7aab6a; font-family: sans-serif;
+            font-size: 0.85rem; margin-top: 0.8rem;
+        }
     </style>
     <script type="importmap">
         {
@@ -26,6 +55,11 @@
     <link rel="stylesheet" href="https://unpkg.com/lil-gui@0.18.0/dist/lil-gui.css">
 </head>
 <body>
+    <div id="loading-screen">
+        <h1>🦝 Raccoon Adventures</h1>
+        <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+        <p id="loading-msg">A carregar o mundo...</p>
+    </div>
     <div id="Tag3DScene"></div>
 
     <script type="module" src="main.js"></script>
