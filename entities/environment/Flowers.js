@@ -4,9 +4,8 @@ import { getAssetPath } from '../../config.js';
 
 const SETTINGS = {
     count: 10,
-    scale: { min: 0.06, max: 0.12 },
+    scale: { min: 0.025, max: 0.05 },
     collectRadius: 0.6,
-    // Mesmo anel da floresta — flores ficam entre as árvores
     spawn: { centerX: 0, centerZ: 1.5, innerR: 3.2, outerR: 6.5 },
 };
 
@@ -60,8 +59,11 @@ export async function createFlowers(scene, exclusionZones = [], onCollect = null
         const mesh = cloneScene(gltf);
         mesh.scale.setScalar(s);
         mesh.position.set(x, 0, z);
-        mesh.rotation.y = Math.random() * Math.PI * 2;
-        freezeObject(mesh);   // matrix estática — sem custo por frame
+        mesh.rotation.x = -Math.PI / 2;  // deitar na horizontal
+        mesh.rotation.z = Math.random() * Math.PI * 2;
+        // Desativar raycast em todos os filhos — não bloqueia o raccoon
+        mesh.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
+        freezeObject(mesh);
         scene.add(mesh);
 
         _flowers.push({ mesh, collected: false });
