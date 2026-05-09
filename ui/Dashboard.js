@@ -1,4 +1,5 @@
 import GUI from 'lil-gui';
+import { setRainIntensity } from '../world/Rain.js';
 
 /**
  * Cria e configura o painel de controlo lil-GUI.
@@ -14,6 +15,7 @@ function createDashboard(climate, campfire, structureLights, scene) {
     _buildTimeFolder(gui, climate);
     _buildLightingFolder(gui, campfire, structureLights);
     if (scene) _buildFogFolder(gui, scene);
+    _buildClimateFolder(gui);
     _buildPerformanceFolder(gui);
 
     return gui;
@@ -103,6 +105,19 @@ function _buildFogFolder(gui, scene) {
         .onChange((value) => {
             scene.fog.density = value;
         });
+}
+
+/**
+ * Pasta de controlo do clima (chuva).
+ * @param {GUI} gui
+ */
+function _buildClimateFolder(gui) {
+    const folder = gui.addFolder('🌦 Clima');
+    const settings = { rain: 0 };
+    folder
+        .add(settings, 'rain', 0, 1, 0.05)
+        .name('Chuva')
+        .onChange(setRainIntensity);
 }
 
 /**
