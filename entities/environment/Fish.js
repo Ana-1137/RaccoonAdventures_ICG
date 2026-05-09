@@ -12,8 +12,8 @@ const SETTINGS = {
         radiusZ: 0.45,
         speedMin: 0.6,
         speedMax: 1.2,
-        yBase: -0.05,
-        yDip:  -0.10,
+        yBase: -0.18,
+        yDip:  -0.22,
     },
     jump: {
         interval: { min: 5.0, max: 12.0 },
@@ -27,34 +27,38 @@ function createFishMesh() {
     const bodyColor = 0xf4a460;
     const finColor  = 0xe07840;
     const group = new THREE.Group();
-    const depth = 0.04; // espessura de extrusão (peixe achatado)
+    const depth = 0.02;
 
-    // ── Corpo: elipse oval ──────────────────────────────────────────────────
+    // Corpo: elipse oval
+    const bW = 0.045, bH = 0.022;
     const bodyShape = new THREE.Shape();
-    const bW = 0.09, bH = 0.045; // semi-eixos da elipse
     bodyShape.absellipse(0, 0, bW, bH, 0, Math.PI * 2);
-    const bodyGeo = new THREE.ExtrudeGeometry(bodyShape, { depth, bevelEnabled: false });
-    const body = new THREE.Mesh(bodyGeo, new THREE.MeshLambertMaterial({ color: bodyColor }));
+    const body = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(bodyShape, { depth, bevelEnabled: false }),
+        new THREE.MeshLambertMaterial({ color: bodyColor })
+    );
     body.position.z = -depth / 2;
     group.add(body);
 
-    // ── Cauda: dois triângulos formando um crescente ─────────────────────────
+    // Cauda: crescente
     const tailShape = new THREE.Shape();
     tailShape.moveTo(0,  0);
-    tailShape.lineTo(-0.055,  0.045);
-    tailShape.lineTo(-0.03,   0);
-    tailShape.lineTo(-0.055, -0.045);
+    tailShape.lineTo(-0.028,  0.022);
+    tailShape.lineTo(-0.015,  0);
+    tailShape.lineTo(-0.028, -0.022);
     tailShape.closePath();
-    const tailGeo = new THREE.ExtrudeGeometry(tailShape, { depth, bevelEnabled: false });
-    const tail = new THREE.Mesh(tailGeo, new THREE.MeshLambertMaterial({ color: finColor }));
+    const tail = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(tailShape, { depth, bevelEnabled: false }),
+        new THREE.MeshLambertMaterial({ color: finColor })
+    );
     tail.position.set(-bW, 0, -depth / 2);
     group.add(tail);
 
-    // ── Barbatana dorsal: triângulo no topo ──────────────────────────────────
+    // Barbatana dorsal
     const dorsalShape = new THREE.Shape();
-    dorsalShape.moveTo(-0.02, 0);
-    dorsalShape.lineTo( 0.03, 0);
-    dorsalShape.lineTo( 0.01, 0.04);
+    dorsalShape.moveTo(-0.010, 0);
+    dorsalShape.lineTo( 0.015, 0);
+    dorsalShape.lineTo( 0.005, 0.020);
     dorsalShape.closePath();
     const dorsal = new THREE.Mesh(
         new THREE.ExtrudeGeometry(dorsalShape, { depth: depth * 0.6, bevelEnabled: false }),
@@ -63,26 +67,39 @@ function createFishMesh() {
     dorsal.position.set(0, bH, -depth * 0.3);
     group.add(dorsal);
 
-    // ── Barbatana peitoral: oval achatado lateral ────────────────────────────
+    // Barbatana peitoral
     const pectShape = new THREE.Shape();
-    pectShape.absellipse(0, 0, 0.03, 0.015, 0, Math.PI * 2);
+    pectShape.absellipse(0, 0, 0.015, 0.008, 0, Math.PI * 2);
     const pectoral = new THREE.Mesh(
-        new THREE.ExtrudeGeometry(pectShape, { depth: 0.005, bevelEnabled: false }),
+        new THREE.ExtrudeGeometry(pectShape, { depth: 0.003, bevelEnabled: false }),
         new THREE.MeshLambertMaterial({ color: finColor })
     );
-    pectoral.position.set(0.02, -bH * 0.3, depth / 2);
+    pectoral.position.set(0.010, -bH * 0.3, depth / 2);
     pectoral.rotation.x = Math.PI / 6;
     group.add(pectoral);
 
-    // ── Olho: círculo pequeno ────────────────────────────────────────────────
-    const eyeGeo = new THREE.CircleGeometry(0.010, 8);
-    const eye = new THREE.Mesh(eyeGeo, new THREE.MeshBasicMaterial({ color: 0x111111 }));
-    eye.position.set(0.055, 0.012, depth / 2 + 0.001);
-    group.add(eye);
+    // Olho + guelra — frente e trás
+    const eyeMat   = new THREE.MeshBasicMaterial({ color: 0x111111 });
+    const gillMat  = new THREE.LineBasicMaterial({ color: 0xc05030 });
 
-    // Orientar o grupo: peixe aponta para +Z (frente)
+    for (const side of [depth / 2 + 0.001, -depth / 2 - 0.001]) {
+        // Olho
+        const eye = new THREE.Mesh(new THREE.CircleGeometry(0.005, 8), eyeMat);
+        eye.position.set(0.028, 0.006, side);
+        if (side < 0) eye.rotation.y = Math.PI;
+        group.add(eye);
+
+        // Guelra: arco curvo (linha)
+        const gillPts = [];
+        for (let i = 0; i <= 8; i++) {
+            const a = -Math.PI * 0.35 + (Math.PI * 0.7) * (i / 8);
+            gillPts.push(new THREE.Vector3(0.012 + Math.cos(a) * 0.012, Math.sin(a) * 0.016, side));
+        }
+        const gillGeo = new THREE.BufferGeometry().setFromPoints(gillPts);
+        group.add(new THREE.Line(gillGeo, gillMat));
+    }
+
     group.rotation.y = Math.PI / 2;
-
     return group;
 }
 
@@ -100,6 +117,8 @@ export function createFish(scene) {
         const dir   = i % 2 === 0 ? 1 : -1;
 
         mesh.position.set(cx, orbit.yBase, cfg.z);
+        // Sem colisões — o personagem pode atravessar os peixes
+        mesh.traverse(obj => { if (obj.isMesh || obj.isLine) obj.raycast = () => {}; });
         scene.add(mesh);
 
         fishes.push({
