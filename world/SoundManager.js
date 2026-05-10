@@ -4,10 +4,11 @@ import { getAssetPath } from '../config.js';
 const SETTINGS = {
     masterVolume: 0.7,
     ambient: {
-        day:   { file: 'sounds/enviroment_day.mp3',   volume: 0.4 },
-        night: { file: 'sounds/enviroment_night.mp3', volume: 0.35 },
-        rain:  { file: 'sounds/rain.mp3',             volume: 0.5 },
-        river: { file: 'sounds/river.mp3',            volume: 0.35 },
+        day:       { file: 'sounds/enviroment_day.mp3',   volume: 0.4 },
+        night:     { file: 'sounds/enviroment_night.mp3', volume: 0.35 },
+        rain:      { file: 'sounds/rain.mp3',             volume: 0.5 },
+        river:     { file: 'sounds/river.mp3',            volume: 0.35 },
+        fireplace: { file: 'sounds/fireplace.mp3',        volume: 0.3 },
     },
     shine:   { file: 'sounds/shine.mp3',   volume: 0.0 },  // volume dinâmico
     collect: { file: 'sounds/collect.mp3', volume: 0.8 },
@@ -30,20 +31,21 @@ export async function initSounds() {
     _master.connect(_ctx.destination);
 
     await Promise.all([
-        _load('day',     SETTINGS.ambient.day),
-        _load('night',   SETTINGS.ambient.night),
-        _load('rain',    SETTINGS.ambient.rain),
-        _load('river',   SETTINGS.ambient.river),
-        _load('shine',   SETTINGS.shine),
-        _load('collect', SETTINGS.collect),
+        _load('day',       SETTINGS.ambient.day),
+        _load('night',     SETTINGS.ambient.night),
+        _load('rain',      SETTINGS.ambient.rain),
+        _load('river',     SETTINGS.ambient.river),
+        _load('fireplace', SETTINGS.ambient.fireplace),
+        _load('shine',     SETTINGS.shine),
+        _load('collect',   SETTINGS.collect),
     ]);
 
-    // Ambientes e river arrancam em loop imediatamente (volume 0 até serem ativados)
-    _playLoop('day',   0);
-    _playLoop('night', 0);
-    _playLoop('rain',  0);
-    _playLoop('river', SETTINGS.ambient.river.volume);
-    _playLoop('shine', 0);
+    _playLoop('day',       0);
+    _playLoop('night',     0);
+    _playLoop('rain',      0);
+    _playLoop('river',     SETTINGS.ambient.river.volume);
+    _playLoop('fireplace', SETTINGS.ambient.fireplace.volume);
+    _playLoop('shine',     0);
 }
 
 // ─── API PÚBLICA ─────────────────────────────────────────────────────────────
