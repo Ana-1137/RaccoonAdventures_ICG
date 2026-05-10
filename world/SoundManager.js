@@ -3,20 +3,20 @@ import { getAssetPath } from '../config.js';
 // ─── CONFIGURAÇÃO ────────────────────────────────────────────────────────────
 const SETTINGS = {
     volumes: {
-        master:   0.7,
-        ambient:  1.0,
-        effects:  1.0,
+        master: 0.7,
+        ambient: 1.0,
+        effects: 1.0,
     },
     ambient: {
-        day:       { file: 'sounds/enviroment_day.mp3',   volume: 0.4 },
-        night:     { file: 'sounds/enviroment_night.mp3', volume: 0.35 },
-        rain:      { file: 'sounds/rain.mp3',             volume: 0.5 },
-        river:     { file: 'sounds/river.mp3',            volume: 0.35 },
+        day: { file: 'sounds/enviroment_day.mp3', volume: 0.4 },
+        night: { file: 'sounds/enviroment_night.mp3', volume: 0.15 },
+        rain: { file: 'sounds/rain.mp3', volume: 0.5 },
+        river: { file: 'sounds/river.mp3', volume: 0.35 },
     },
     effects: {
-        fireplace: { file: 'sounds/fireplace.mp3', volume: 0.7, range: 4.0 },
-        shine:     { file: 'sounds/shine.mp3',     volume: 0.9, range: 3.5 },
-        collect:   { file: 'sounds/collect.mp3',   volume: 0.8 },
+        fireplace: { file: 'sounds/fireplace.mp3', volume: 0.7, range: 2.0 },
+        shine: { file: 'sounds/shine.mp3', volume: 1.9, range: 4.5 },
+        collect: { file: 'sounds/collect.mp3', volume: 0.8 },
     },
 };
 
@@ -33,11 +33,11 @@ export async function initSounds() {
     if (_ctx) return;
     _ctx = new (window.AudioContext || window.webkitAudioContext)();
 
-    _masterGain  = _ctx.createGain();
+    _masterGain = _ctx.createGain();
     _ambientGain = _ctx.createGain();
     _effectsGain = _ctx.createGain();
 
-    _masterGain.gain.value  = SETTINGS.volumes.master;
+    _masterGain.gain.value = SETTINGS.volumes.master;
     _ambientGain.gain.value = SETTINGS.volumes.ambient;
     _effectsGain.gain.value = SETTINGS.volumes.effects;
 
@@ -46,21 +46,21 @@ export async function initSounds() {
     _masterGain.connect(_ctx.destination);
 
     await Promise.all([
-        _load('day',       SETTINGS.ambient.day,       _ambientGain),
-        _load('night',     SETTINGS.ambient.night,     _ambientGain),
-        _load('rain',      SETTINGS.ambient.rain,      _ambientGain),
-        _load('river',     SETTINGS.ambient.river,     _ambientGain),
+        _load('day', SETTINGS.ambient.day, _ambientGain),
+        _load('night', SETTINGS.ambient.night, _ambientGain),
+        _load('rain', SETTINGS.ambient.rain, _ambientGain),
+        _load('river', SETTINGS.ambient.river, _ambientGain),
         _load('fireplace', SETTINGS.effects.fireplace, _effectsGain),
-        _load('shine',     SETTINGS.effects.shine,     _effectsGain),
-        _load('collect',   SETTINGS.effects.collect,   _effectsGain),
+        _load('shine', SETTINGS.effects.shine, _effectsGain),
+        _load('collect', SETTINGS.effects.collect, _effectsGain),
     ]);
 
-    _playLoop('day',       0);
-    _playLoop('night',     0);
-    _playLoop('rain',      0);
-    _playLoop('river',     SETTINGS.ambient.river.volume);
+    _playLoop('day', 0);
+    _playLoop('night', 0);
+    _playLoop('rain', 0);
+    _playLoop('river', SETTINGS.ambient.river.volume);
     _playLoop('fireplace', 0);
-    _playLoop('shine',     0);
+    _playLoop('shine', 0);
 }
 
 // ─── API PÚBLICA ─────────────────────────────────────────────────────────────
@@ -69,9 +69,9 @@ export async function initSounds() {
 export function updateAmbient(hour, rainLevel) {
     if (!_ctx || !_enabled) return;
     const isNight = hour >= 18 || hour < 6;
-    _setVol('day',   isNight ? 0 : SETTINGS.ambient.day.volume);
+    _setVol('day', isNight ? 0 : SETTINGS.ambient.day.volume);
     _setVol('night', isNight ? SETTINGS.ambient.night.volume : 0);
-    _setVol('rain',  rainLevel * SETTINGS.ambient.rain.volume);
+    _setVol('rain', rainLevel * SETTINGS.ambient.rain.volume);
 }
 
 /**
@@ -109,10 +109,10 @@ export function setAudioEnabled(val) {
     _enabled = val;
     if (_masterGain) _masterGain.gain.value = val ? SETTINGS.volumes.master : 0;
 }
-export function setMasterVolume(val)  { SETTINGS.volumes.master  = val; if (_masterGain  && _enabled) _masterGain.gain.value  = val; }
-export function setAmbientVolume(val) { SETTINGS.volumes.ambient = val; if (_ambientGain)              _ambientGain.gain.value = val; }
-export function setEffectsVolume(val) { SETTINGS.volumes.effects = val; if (_effectsGain)              _effectsGain.gain.value = val; }
-export function getMasterVolume()  { return SETTINGS.volumes.master; }
+export function setMasterVolume(val) { SETTINGS.volumes.master = val; if (_masterGain && _enabled) _masterGain.gain.value = val; }
+export function setAmbientVolume(val) { SETTINGS.volumes.ambient = val; if (_ambientGain) _ambientGain.gain.value = val; }
+export function setEffectsVolume(val) { SETTINGS.volumes.effects = val; if (_effectsGain) _effectsGain.gain.value = val; }
+export function getMasterVolume() { return SETTINGS.volumes.master; }
 export function getAmbientVolume() { return SETTINGS.volumes.ambient; }
 export function getEffectsVolume() { return SETTINGS.volumes.effects; }
 
