@@ -4,8 +4,8 @@ import { getValeCenterXAtZ, GROUND_SETTINGS } from '../../world/Ground.js';
 // ─── CONFIGURAÇÃO CENTRAL ────────────────────────────────────────────────────
 const SETTINGS = {
     orbits: [
-        { z: -3.0 }, { z: -1.5 }, { z:  0.0 },
-        { z:  1.5 }, { z:  3.0 }, { z:  3.8 },
+        { z: -3.0, xOffset: +2 }, { z: -1.5 }, { z:  0.0 },
+        { z:  1.5 }, { z:  3.0, xOffset: -2 }, { z:  3.8, xOffset: -2 },
     ],
     orbit: {
         radiusX: 0.12,   // pequeno — mantém peixe no centro do vale
@@ -111,7 +111,7 @@ export function createFish(scene) {
 
     orbits.forEach((cfg, i) => {
         const mesh = createFishMesh();
-        const cx = getValeCenterXAtZ(cfg.z, GROUND_SETTINGS.vale);
+        const cx = getValeCenterXAtZ(cfg.z, GROUND_SETTINGS.vale) + (cfg.xOffset ?? 0);
         const speed = orbit.speedMin + Math.random() * (orbit.speedMax - orbit.speedMin);
         const phase = Math.random() * Math.PI * 2;
         const dir   = i % 2 === 0 ? 1 : -1;
