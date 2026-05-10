@@ -56,22 +56,18 @@ class ThirdPersonCamera {
     update(isMoving, orbitControls, isRunning) {
         if (!this.target) return;
 
-        // ── Modo diálogo: câmara atrás do raccoon a olhar para o NPC ─────────
-        if (this._dialogueLock && this._dialogueTarget) {
+        // ── Modo diálogo: igual à câmara default mas ligeiramente de lado ────
+        if (this._dialogueLock) {
             const rp = this.target.position;
-            const np = this._dialogueTarget;
-            // Direção do raccoon para o NPC
-            const toNpc = np.clone().sub(rp).normalize();
-            // Câmara atrás do raccoon (oposto ao NPC), ligeiramente ao lado e baixa
-            const back = toNpc.clone().negate().multiplyScalar(0.4);
-            back.x += toNpc.z * 0.25;   // offset lateral
-            back.z -= toNpc.x * 0.25;
-            const idealPos = rp.clone().add(back).add(new THREE.Vector3(0, 0.12, 0));
-            this.camera.position.lerp(idealPos, 0.06);
-            // Olhar para o ponto médio entre os dois ao nível dos olhos
-            const lookAt = rp.clone().lerp(np, 0.6).add(new THREE.Vector3(0, 0.1, 0));
-            this.camera.lookAt(lookAt);
-            orbitControls.target.copy(lookAt);
+            const targetPos = rp.clone().add(this.lookAtOffset);
+            // Offset default rodado ~30° para a esquerda para ver os dois personagens
+            const sideOffset = this.defaultOffsetDirection.clone();
+            sideOffset.x += 0.4;  // desvio lateral
+            sideOffset.normalize();
+            const idealPos = targetPos.clone().add(sideOffset.multiplyScalar(this.defaultDistance));
+            this.camera.position.lerp(idealPos, 0.05);
+            this.camera.lookAt(targetPos);
+            orbitControls.target.copy(targetPos);
             this.lastTargetPosition.copy(rp);
             return;
         }
