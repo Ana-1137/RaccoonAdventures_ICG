@@ -17,7 +17,7 @@ import { createCampfireLight } from './lights/CampfireLight.js';
 import { createStructureLights } from './lights/StructureLights.js';
 import { createDashboard }    from './ui/Dashboard.js';
 import { createRain, updateRain, getRainIntensity } from './world/Rain.js';
-import { initSounds, updateAmbient, updateShine } from './world/SoundManager.js';
+import { initSounds, updateAmbient, updateShine, updateFireplace } from './world/SoundManager.js';
 
 // ─── LOADING SCREEN ──────────────────────────────────────────────────────────
 const _loadingScreen = document.getElementById('loading-screen');
@@ -140,6 +140,7 @@ raccoon.modelLoaded.then(async () => {
         // Áudio
         updateAmbient(climate.getHour(), getRainIntensity());
         updateShine(getNearestFlowerProximity(raccoon.model.position));
+        updateFireplace(raccoon.model.position, campfire.settings.enabled);
 
         thirdPersonCamera.update(isMoving, orbitControls, isRunning);
         orbitControls.update();
