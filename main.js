@@ -16,8 +16,8 @@ import { updateFlowers, getFlowerCount, getNearestFlowerProximity } from './enti
 import { createCampfireLight } from './lights/CampfireLight.js';
 import { createStructureLights } from './lights/StructureLights.js';
 import { createDashboard }    from './ui/Dashboard.js';
-import { createRain, updateRain } from './world/Rain.js';
-import { initSounds, updateAmbient, updateShine, getRainIntensity } from './world/SoundManager.js';
+import { createRain, updateRain, getRainIntensity } from './world/Rain.js';
+import { initSounds, updateAmbient, updateShine } from './world/SoundManager.js';
 
 // ─── LOADING SCREEN ──────────────────────────────────────────────────────────
 const _loadingScreen = document.getElementById('loading-screen');
