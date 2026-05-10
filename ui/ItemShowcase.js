@@ -70,7 +70,7 @@ function _createGlitter(scene, pos) {
  * @param {string}         itemIcon
  * @param {Function}       [onClose]
  */
-export async function startShowcase(scene, camera, orbitControls, itemId, itemName, itemIcon, onClose = null) {
+export async function startShowcase(scene, camera, orbitControls, itemId, itemName, itemIcon, worldPos = null, onClose = null) {
     if (_active) return;
     _active    = true;
     _camera    = camera;
@@ -78,21 +78,25 @@ export async function startShowcase(scene, camera, orbitControls, itemId, itemNa
     _onClose   = onClose;
     _time      = 0;
 
-    // Desativar orbit controls durante showcase
+    // Centro do showcase: posição fornecida ou origem
+    const cx = worldPos ? worldPos.x : 0;
+    const cy = worldPos ? worldPos.y + ORBIT_Y + 0.6 : ORBIT_Y;
+    const cz = worldPos ? worldPos.z : 0;
+
     orbitControls.enabled = false;
 
-    // Carregar item (flor)
     const gltf = await loadGLTF(getAssetPath('elements/Flower.glb'));
     _mesh = cloneScene(gltf);
     _mesh.scale.setScalar(0.06);
     _mesh.rotation.x = -Math.PI / 2;
-    _mesh.position.set(0, ORBIT_Y, 0);
+    _mesh.position.set(cx, cy, cz);
     _mesh.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
     scene.add(_mesh);
 
-    _glitter = _createGlitter(scene, new THREE.Vector3(0, ORBIT_Y, 0));
+    _glitter = _createGlitter(scene, new THREE.Vector3(cx, cy, cz));
+    // Store center for updateShowcase
+    _glitter._center = new THREE.Vector3(cx, cy, cz);
 
-    // Mostrar overlay
     _overlay.style.display = 'flex';
     _hint.onclick = () => _close(scene, itemId, itemName, itemIcon);
 }
@@ -117,22 +121,20 @@ export function updateShowcase(delta) {
     if (!_active || !_mesh) return;
     _time += delta;
 
-    // Rodar item
     _mesh.rotation.z += delta * 1.2;
 
-    // Câmara orbita em torno do item
+    const center = _glitter?._center ?? new THREE.Vector3(0, ORBIT_Y, 0);
     const angle = _time * ORBIT_SPEED;
     _camera.position.set(
-        Math.cos(angle) * ORBIT_RADIUS,
-        ORBIT_Y + 0.25,
-        Math.sin(angle) * ORBIT_RADIUS
+        center.x + Math.cos(angle) * ORBIT_RADIUS,
+        center.y + 0.25,
+        center.z + Math.sin(angle) * ORBIT_RADIUS
     );
-    _camera.lookAt(0, ORBIT_Y, 0);
+    _camera.lookAt(center);
 
-    // Animar glitter
     if (_glitter) {
         const pos = _glitter.geometry.attributes.position;
-        const bp  = _glitter._basePos;
+        const bp  = _glitter._center;
         const now = Date.now() * 0.001;
         for (let i = 0; i < 40; i++) {
             const ph = _glitter._phases[i];

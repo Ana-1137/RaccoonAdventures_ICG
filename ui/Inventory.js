@@ -1,8 +1,25 @@
-// Inventário simples — tecla I abre/fecha
+import { getAssetPath } from '../config.js';
+
+// Inventário simples — tecla I ou botão abre/fecha
 // Items: { id, name, icon (emoji), qty }
 
 const _items = [];
 let _open = false;
+
+// ─── Botão de inventário (canto superior esquerdo) ───────────────────────────
+const _btn = document.createElement('img');
+_btn.src = getAssetPath('elements/inventory.png');
+_btn.style.cssText = `
+    position:fixed; top:12px; left:12px; width:48px; height:48px;
+    cursor:pointer; z-index:1500; border-radius:8px;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+    transition:transform .15s;
+`;
+_btn.title = 'Inventário [I]';
+_btn.addEventListener('mouseenter', () => { _btn.style.transform = 'scale(1.1)'; });
+_btn.addEventListener('mouseleave', () => { _btn.style.transform = 'scale(1)'; });
+_btn.addEventListener('click', toggleInventory);
+document.body.appendChild(_btn);
 
 // ─── UI ──────────────────────────────────────────────────────────────────────
 const _overlay = document.createElement('div');

@@ -5,7 +5,7 @@ import { createLights }       from './lights/SceneLights.js';
 import { createClimate }      from './world/Climate.js';
 import { buildWorld }         from './world/World.js';
 import { Raccoon }            from './entities/player/Raccoon.js';
-import { Fox }               from './entities/environment/Fox.js';
+import { Fox, FOX_POSITION }  from './entities/environment/Fox.js';
 import { ThirdPersonCamera }  from './controls/ThirdPersonCamera.js';
 import { keyStates }          from './controls/KeyboardControls.js';
 import { createTouchControls } from './controls/TouchControls.js';
@@ -20,7 +20,6 @@ import { createStructureLights } from './lights/StructureLights.js';
 import { createDashboard }    from './ui/Dashboard.js';
 import { createRain, updateRain, getRainIntensity } from './world/Rain.js';
 import { initSounds, updateAmbient, updateShine, updateFireplace, playUnlock } from './world/SoundManager.js';
-import { startReward, updateReward } from './entities/player/QuestReward.js';
 import { startShowcase, updateShowcase, isShowcaseActive } from './ui/ItemShowcase.js';
 import './ui/Inventory.js';
 
@@ -106,10 +105,8 @@ raccoon.modelLoaded.then(async () => {
     // Recompensa da missão — disparada pela Fox quando o diálogo de conclusão termina
     fox.onMissionComplete(() => {
         playUnlock();
-        startShowcase(scene, camera, orbitControls, 'flower_reward', 'Flor Especial', '🌺', () => {
-            // Após fechar showcase: colocar flor na cabeça
-            startReward(scene, raccoon.model, () => {});
-        });
+        const foxWorldPos = new THREE.Vector3(FOX_POSITION.x, FOX_POSITION.y, FOX_POSITION.z);
+        startShowcase(scene, camera, orbitControls, 'flower_reward', 'Flor Especial', '🌺', foxWorldPos);
     });
 
     const clock = new THREE.Clock();
@@ -139,7 +136,6 @@ raccoon.modelLoaded.then(async () => {
 
         raccoon.update(delta, keyStates);
         fox.update(delta, raccoon.model.position, thirdPersonCamera);
-        updateReward(delta);
         updateShowcase(delta);
         updateForest(delta, raccoon.model.position);
 

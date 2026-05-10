@@ -60,12 +60,12 @@ class ThirdPersonCamera {
         if (this._dialogueLock && this._dialogueTarget) {
             const rp = this.target.position;
             const np = this._dialogueTarget;
-            // Midpoint entre os dois, câmara ligeiramente de lado e acima
             const mid = rp.clone().lerp(np, 0.5);
             const side = new THREE.Vector3(np.z - rp.z, 0, -(np.x - rp.x)).normalize();
-            const idealPos = mid.clone().add(side.multiplyScalar(1.2)).add(new THREE.Vector3(0, 0.5, 0));
+            // Mais baixo (0.15 em vez de 0.5) e mais perto (0.7 em vez de 1.2)
+            const idealPos = mid.clone().add(side.multiplyScalar(0.7)).add(new THREE.Vector3(0, 0.15, 0));
             this.camera.position.lerp(idealPos, 0.05);
-            this.camera.lookAt(mid.clone().add(new THREE.Vector3(0, 0.2, 0)));
+            this.camera.lookAt(mid.clone().add(new THREE.Vector3(0, 0.1, 0)));
             orbitControls.target.copy(mid);
             this.lastTargetPosition.copy(this.target.position);
             return;

@@ -3,9 +3,12 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { getAssetPath } from '../../config.js';
 import { setQuestActive, getFlowerCount } from './Flowers.js';
 
-const POSITION    = { x: 2.2, y: 0, z: 1.2 };
-const WAVE_RADIUS = 1.8;   // começa a acenar
-const TALK_RADIUS = 0.8;   // pode interagir
+const POSITION = { x: 1.2, y: 0, z: 1.2 };
+const WAVE_RADIUS   = 0.6;
+const TALK_RADIUS   = 0.4;
+const CANCEL_RADIUS = 0.6;  // sair deste range cancela o diálogo
+
+export const FOX_POSITION = POSITION;
 
 // Frases aleatórias pós-missão (antes de completar)
 const CHAT_LINES = [
@@ -49,7 +52,7 @@ function _btn(label, color) {
     return b;
 }
 const _btnYes = _btn('Sim 🌸', '#4caf50');
-const _btnNo  = _btn('Não',    '#e53935');
+const _btnNo = _btn('Não', '#e53935');
 
 const _prompt = _el(`
     position:fixed; bottom:115px; left:50%; transform:translateX(-50%);
@@ -69,28 +72,28 @@ function _hide() { _box.style.display = 'none'; _btnRow.style.display = 'none'; 
 // ─── Fox ─────────────────────────────────────────────────────────────────────
 export class Fox {
     constructor(scene) {
-        this.scene   = scene;
-        this.model   = null;
-        this.mixer   = null;
+        this.scene = scene;
+        this.model = null;
+        this.mixer = null;
         this.actions = {};
-        this._state  = 'idle';
-        this._phase  = 'idle';   // idle | quest | chat | complete
-        this._lineIdx   = 0;
+        this._state = 'idle';
+        this._phase = 'idle';   // idle | quest | chat | complete
+        this._lineIdx = 0;
         this._chatLines = null;
         this._pendingTalk = false;
-        this._questDone   = false;
+        this._questDone = false;
         this._missionComplete = false;
         this._onComplete = null;  // callback → main.js para recompensa
 
         this.modelLoaded = new Promise(r => this._load(r));
 
         _btnYes.addEventListener('click', () => this._acceptQuest());
-        _btnNo.addEventListener('click',  () => this._declineQuest());
+        _btnNo.addEventListener('click', () => this._declineQuest());
 
         window.addEventListener('keydown', (e) => {
             if (e.code !== 'KeyE') return;
-            if (this._phase === 'idle')     { this._pendingTalk = true; return; }
-            if (this._phase === 'chat')     this._advanceLine();
+            if (this._phase === 'idle') { this._pendingTalk = true; return; }
+            if (this._phase === 'chat') this._advanceLine();
             if (this._phase === 'complete') this._advanceLine();
         });
     }
@@ -106,7 +109,7 @@ export class Fox {
             this.model.position.set(POSITION.x, POSITION.y, POSITION.z);
             this.model.rotation.y = -Math.PI / 2;
             this.model.traverse(c => {
-                if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; c.raycast = () => {}; }
+                if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; c.raycast = () => { }; }
             });
             this.scene.add(this.model);
             this.mixer = new THREE.AnimationMixer(this.model);
@@ -118,8 +121,8 @@ export class Fox {
         const loader = new FBXLoader();
         const base = getAssetPath('animations') + '/';
         const files = [
-            { name: 'idle',    file: 'Dwarf Idle.fbx' },
-            { name: 'wave',    file: 'Waving.fbx' },
+            { name: 'idle', file: 'Dwarf Idle.fbx' },
+            { name: 'wave', file: 'Waving.fbx' },
             { name: 'talking', file: 'Talking.fbx' },
         ];
         let done = 0;
@@ -219,6 +222,15 @@ export class Fox {
         const dist = Math.sqrt(dx * dx + dz * dz);
 
         const inDialogue = this._phase === 'quest' || this._phase === 'chat' || this._phase === 'complete';
+
+        // Cancelar diálogo se o jogador se afastar
+        if (inDialogue && dist > CANCEL_RADIUS) {
+            _hide();
+            this._phase = 'idle';
+            this._play('idle');
+            if (tpCamera) tpCamera.setDialogueLock(false);
+            return;
+        }
 
         // Câmara lock durante diálogo
         if (tpCamera) {
