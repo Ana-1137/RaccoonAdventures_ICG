@@ -76,8 +76,8 @@ export async function startShowcase(scene, camera, orbitControls, itemId, itemNa
 
     const gltf = await loadGLTF(getAssetPath('elements/Flower.glb'));
     _mesh = cloneScene(gltf);
-    _mesh.scale.setScalar(0.4);
-    _mesh.rotation.x = -Math.PI / 2;
+    _mesh.scale.setScalar(0.3);
+    // Sem rotação — flor fica vertical, visível de lado
     _mesh.position.copy(SHOWCASE_POS);
     _mesh.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
     scene.add(_mesh);
@@ -114,14 +114,14 @@ export function updateShowcase(delta) {
     if (!_active || !_mesh) return;
     _time += delta;
 
-    // Flor roda no lugar
-    _mesh.rotation.z += delta * 1.5;
+    // Flor roda no lugar (eixo Y — gira como um pião vertical)
+    _mesh.rotation.y += delta * 1.5;
 
-    // Câmara orbita em círculo ligeiramente acima da flor, focada nela
+    // Câmara orbita em círculo ligeiramente acima, olha para o centro da flor
     const angle = _time * ORBIT_SPEED;
     _camera.position.set(
         SHOWCASE_POS.x + Math.cos(angle) * ORBIT_RADIUS,
-        SHOWCASE_POS.y + 0.08,   // ligeiramente acima
+        SHOWCASE_POS.y + 0.3,
         SHOWCASE_POS.z + Math.sin(angle) * ORBIT_RADIUS
     );
     _camera.lookAt(SHOWCASE_POS);
