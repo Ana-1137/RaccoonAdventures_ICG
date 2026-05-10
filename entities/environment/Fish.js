@@ -123,6 +123,7 @@ export function createFish(scene) {
 
         fishes.push({
             mesh, cx, cz: cfg.z, speed, phase, dir,
+            xOffset: cfg.xOffset ?? 0,
             angle: phase,
             jumpTimer: jump.interval.min + Math.random() * (jump.interval.max - jump.interval.min),
             isJumping: false,
@@ -143,8 +144,8 @@ export function updateFish(delta) {
         const x = fish.cx + Math.cos(fish.angle) * orbit.radiusX;
         const z = fish.cz + Math.sin(fish.angle) * orbit.radiusZ;
 
-        // Recalcular cx para o Z atual (segue curva do vale)
-        fish.cx = getValeCenterXAtZ(fish.cz, GROUND_SETTINGS.vale);
+        // Recalcular cx para o Z atual (segue curva do vale) + offset fixo
+        fish.cx = getValeCenterXAtZ(fish.cz, GROUND_SETTINGS.vale) + fish.xOffset;
 
         const yDip = orbit.yBase + (orbit.yDip - orbit.yBase) * (0.5 + 0.5 * Math.sin(fish.angle * 2));
 
