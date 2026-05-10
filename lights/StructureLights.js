@@ -196,9 +196,12 @@ export function createStructureLights(scene) {
             bulb.position.set(x, y, z);
             scene.add(bulb);
 
-            const light = new THREE.PointLight(festoon.bulbColor, festoon.lightIntensity, festoon.lightRange);
+            const light = new THREE.SpotLight(festoon.bulbColor, festoon.lightIntensity, festoon.lightRange, Math.PI / 5, 0.4);
             light.position.set(x, y, z);
+            light.target.position.set(x, 0, z);
+            light.castShadow = false;
             scene.add(light);
+            scene.add(light.target);
             allLights.push(light);
         }
     }
