@@ -16,7 +16,7 @@ let _savedCamQuat  = null;
 
 const ORBIT_RADIUS = 1.5;
 const ORBIT_SPEED  = 0.6;
-const SHOWCASE_POS = new THREE.Vector3(0, 1, 1);
+const SHOWCASE_POS = new THREE.Vector3(1, 0.3, 1.2);
 
 // ─── Overlay ─────────────────────────────────────────────────────────────────
 const _overlay = document.createElement('div');
