@@ -210,7 +210,7 @@ export class Fox {
         }
     }
 
-    update(delta, playerPos) {
+    update(delta, playerPos, tpCamera = null) {
         if (!this.model || !this.mixer) return;
         this.mixer.update(delta);
 
@@ -218,7 +218,18 @@ export class Fox {
         const dz = playerPos.z - POSITION.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
 
-        if (this._phase === 'quest' || this._phase === 'chat' || this._phase === 'complete') {
+        const inDialogue = this._phase === 'quest' || this._phase === 'chat' || this._phase === 'complete';
+
+        // Câmara lock durante diálogo
+        if (tpCamera) {
+            if (inDialogue) {
+                tpCamera.setDialogueLock(true, new THREE.Vector3(POSITION.x, POSITION.y + 0.8, POSITION.z));
+            } else {
+                tpCamera.setDialogueLock(false);
+            }
+        }
+
+        if (inDialogue) {
             _prompt.style.display = 'none';
             return;
         }

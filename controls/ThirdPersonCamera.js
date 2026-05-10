@@ -5,6 +5,8 @@ class ThirdPersonCamera {
         this.camera = camera;
         this.target = target;
         this.isInteracting = false;
+        this._dialogueLock = false;      // true durante diálogo com Fox
+        this._dialogueTarget = null;     // posição do NPC para olhar
         
         // Offset (Fase 6): Equilíbrio entre horizonte e personagem
         this.defaultOffsetDirection = new THREE.Vector3(0.25, 0.18, -0.65).normalize();
@@ -43,8 +45,31 @@ class ThirdPersonCamera {
         orbitControls.addEventListener('end', stopInteracting);
     }
 
+    /** Liga/desliga o lock de câmara para diálogo.
+     *  @param {boolean} active
+     *  @param {THREE.Vector3} [npcPos] — posição do NPC para enquadrar */
+    setDialogueLock(active, npcPos = null) {
+        this._dialogueLock = active;
+        this._dialogueTarget = npcPos ? npcPos.clone() : null;
+    }
+
     update(isMoving, orbitControls, isRunning) {
         if (!this.target) return;
+
+        // ── Modo diálogo: câmara entre raccoon e NPC ─────────────────────────
+        if (this._dialogueLock && this._dialogueTarget) {
+            const rp = this.target.position;
+            const np = this._dialogueTarget;
+            // Midpoint entre os dois, câmara ligeiramente de lado e acima
+            const mid = rp.clone().lerp(np, 0.5);
+            const side = new THREE.Vector3(np.z - rp.z, 0, -(np.x - rp.x)).normalize();
+            const idealPos = mid.clone().add(side.multiplyScalar(1.2)).add(new THREE.Vector3(0, 0.5, 0));
+            this.camera.position.lerp(idealPos, 0.05);
+            this.camera.lookAt(mid.clone().add(new THREE.Vector3(0, 0.2, 0)));
+            orbitControls.target.copy(mid);
+            this.lastTargetPosition.copy(this.target.position);
+            return;
+        }
 
         // --- Efeitos de Velocidade (Fase 7) ---
         // Aumentar o FOV quando corre (efeito de distorção)

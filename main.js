@@ -21,6 +21,8 @@ import { createDashboard }    from './ui/Dashboard.js';
 import { createRain, updateRain, getRainIntensity } from './world/Rain.js';
 import { initSounds, updateAmbient, updateShine, updateFireplace, playUnlock } from './world/SoundManager.js';
 import { startReward, updateReward } from './entities/player/QuestReward.js';
+import { startShowcase, updateShowcase, isShowcaseActive } from './ui/ItemShowcase.js';
+import './ui/Inventory.js';
 
 // ─── LOADING SCREEN ──────────────────────────────────────────────────────────
 const _loadingScreen = document.getElementById('loading-screen');
@@ -103,7 +105,11 @@ raccoon.modelLoaded.then(async () => {
 
     // Recompensa da missão — disparada pela Fox quando o diálogo de conclusão termina
     fox.onMissionComplete(() => {
-        startReward(scene, raccoon.model, playUnlock);
+        playUnlock();
+        startShowcase(scene, camera, orbitControls, 'flower_reward', 'Flor Especial', '🌺', () => {
+            // Após fechar showcase: colocar flor na cabeça
+            startReward(scene, raccoon.model, () => {});
+        });
     });
 
     const clock = new THREE.Clock();
@@ -132,8 +138,9 @@ raccoon.modelLoaded.then(async () => {
         campfire.update(raccoon.model.position, delta);
 
         raccoon.update(delta, keyStates);
-        fox.update(delta, raccoon.model.position);
+        fox.update(delta, raccoon.model.position, thirdPersonCamera);
         updateReward(delta);
+        updateShowcase(delta);
         updateForest(delta, raccoon.model.position);
 
         if (world.basin) updateWater(world.basin, delta);
