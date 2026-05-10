@@ -1,16 +1,26 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { getAssetPath } from '../../config.js';
-import { setQuestActive } from './Flowers.js';
+import { setQuestActive, getFlowerCount } from './Flowers.js';
 
 const POSITION    = { x: 2.2, y: 0, z: 1.2 };
-const WAVE_RADIUS = 2.0;
-const TALK_RADIUS = 1.2;
+const WAVE_RADIUS = 1.8;   // começa a acenar
+const TALK_RADIUS = 0.8;   // pode interagir
 
-// Diálogo após aceitar a missão (repetível)
-const DIALOGUE_AFTER = [
-    "Obrigada! Já sabes, flores brilhantes pela floresta. 🌸",
-    "Até já! 🦊",
+// Frases aleatórias pós-missão (antes de completar)
+const CHAT_LINES = [
+    "Ainda faltam algumas flores! Continua a explorar a floresta. 🌿",
+    "Já encontraste as flores brilhantes? Estão escondidas entre as árvores!",
+    "Obrigada por ajudares! Vai lá buscar as flores. 🌸",
+    "Não desistas! A minha companheira vai adorar. 🦊",
+    "Já tens algumas? Ótimo! Continua assim!",
+];
+
+// Frases de conclusão (quando traz as 10 flores)
+const COMPLETE_LINES = [
+    "Conseguiste! Trouxeste todas as flores! 🌸🌸🌸",
+    "A minha companheira vai ficar tão feliz! Muito obrigada!",
+    "Como prometido, fica com esta flor especial para ti. 🌺",
 ];
 
 // ─── UI ──────────────────────────────────────────────────────────────────────
@@ -21,7 +31,6 @@ function _el(css) {
     return d;
 }
 
-// Balão de diálogo
 const _box = _el(`
     position:fixed; bottom:60px; left:50%; transform:translateX(-50%);
     background:rgba(0,0,0,0.78); color:#fff; font-family:sans-serif;
@@ -30,28 +39,18 @@ const _box = _el(`
     border:1px solid rgba(255,255,255,0.2); display:none;
 `);
 
-// Botões Sim / Não (só visíveis no pedido de missão)
-const _btnRow = _el(`
-    position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
-    display:none; gap:12px; flex-direction:row;
-`);
-_btnRow.style.display = 'none';
+const _btnRow = _el(`position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:none;gap:12px;`);
 
 function _btn(label, color) {
     const b = document.createElement('button');
     b.textContent = label;
-    b.style.cssText = `
-        padding:8px 28px; border-radius:6px; border:none; cursor:pointer;
-        font-size:1rem; font-family:sans-serif;
-        background:${color}; color:#fff; font-weight:bold;
-    `;
+    b.style.cssText = `padding:8px 28px;border-radius:6px;border:none;cursor:pointer;font-size:1rem;font-family:sans-serif;background:${color};color:#fff;font-weight:bold;`;
     _btnRow.appendChild(b);
     return b;
 }
 const _btnYes = _btn('Sim 🌸', '#4caf50');
 const _btnNo  = _btn('Não',    '#e53935');
 
-// Prompt [E]
 const _prompt = _el(`
     position:fixed; bottom:115px; left:50%; transform:translateX(-50%);
     background:rgba(255,255,255,0.15); color:#fff; font-family:sans-serif;
@@ -60,10 +59,10 @@ const _prompt = _el(`
 `);
 _prompt.textContent = 'Pressiona [E] para falar';
 
-function _show(text, showButtons = false) {
-    _box.textContent = showButtons ? text : text + '  [E]';
+function _show(text, showBtns = false) {
+    _box.textContent = showBtns ? text : text + '  [E]';
     _box.style.display = 'block';
-    _btnRow.style.display = showButtons ? 'flex' : 'none';
+    _btnRow.style.display = showBtns ? 'flex' : 'none';
 }
 function _hide() { _box.style.display = 'none'; _btnRow.style.display = 'none'; }
 
@@ -75,30 +74,35 @@ export class Fox {
         this.mixer   = null;
         this.actions = {};
         this._state  = 'idle';
-        this._phase  = 'idle';   // idle | quest | after
-        this._afterIdx = 0;
+        this._phase  = 'idle';   // idle | quest | chat | complete
+        this._lineIdx   = 0;
+        this._chatLines = null;
         this._pendingTalk = false;
-        this._questDone = false;
+        this._questDone   = false;
+        this._missionComplete = false;
+        this._onComplete = null;  // callback → main.js para recompensa
 
         this.modelLoaded = new Promise(r => this._load(r));
 
-        // Botões
         _btnYes.addEventListener('click', () => this._acceptQuest());
         _btnNo.addEventListener('click',  () => this._declineQuest());
 
-        // Tecla E
         window.addEventListener('keydown', (e) => {
             if (e.code !== 'KeyE') return;
-            if (this._phase === 'idle') { this._pendingTalk = true; return; }
-            if (this._phase === 'after') this._advanceAfter();
+            if (this._phase === 'idle')     { this._pendingTalk = true; return; }
+            if (this._phase === 'chat')     this._advanceLine();
+            if (this._phase === 'complete') this._advanceLine();
         });
     }
+
+    /** Regista callback chamado quando a missão é concluída. */
+    onMissionComplete(cb) { this._onComplete = cb; }
 
     _load(resolve) {
         const loader = new FBXLoader();
         loader.load(getAssetPath('elements/fox.fbx'), (fbx) => {
             this.model = fbx;
-            this.model.scale.setScalar(0.1);
+            this.model.scale.setScalar(0.012);
             this.model.position.set(POSITION.x, POSITION.y, POSITION.z);
             this.model.rotation.y = -Math.PI / 2;
             this.model.traverse(c => {
@@ -139,23 +143,48 @@ export class Fox {
         this._state = name;
     }
 
-    // Inicia o pedido de missão
-    _startQuest() {
-        this._phase = 'quest';
-        this._play('talking');
-        _show(
-            'Olá guaxinim! Precisava da tua ajuda a apanhar algumas flores para surpreender a minha companheira. Ajudas-me?',
-            true   // mostrar botões
-        );
+    _startConversation() {
+        const { collected, total } = getFlowerCount();
+        const allCollected = collected >= total && total > 0;
+
+        if (allCollected && !this._missionComplete) {
+            // Missão completa!
+            this._missionComplete = true;
+            this._phase = 'complete';
+            this._chatLines = COMPLETE_LINES;
+            this._lineIdx = 0;
+            _show(COMPLETE_LINES[0]);
+            this._play('talking');
+        } else if (this._missionComplete) {
+            // Já completou — frase genérica
+            this._phase = 'chat';
+            this._chatLines = ["Obrigada de novo! A minha companheira adorou as flores. 🌸"];
+            this._lineIdx = 0;
+            _show(this._chatLines[0]);
+            this._play('talking');
+        } else if (this._questDone) {
+            // Missão em curso — frase aleatória de encorajamento
+            this._phase = 'chat';
+            this._chatLines = [CHAT_LINES[Math.floor(Math.random() * CHAT_LINES.length)]];
+            this._lineIdx = 0;
+            _show(this._chatLines[0]);
+            this._play('talking');
+        } else {
+            // Primeira vez — pedido de missão
+            this._phase = 'quest';
+            _show('Olá guaxinim! Precisava da tua ajuda a apanhar algumas flores para surpreender a minha companheira. Ajudas-me?', true);
+            this._play('talking');
+        }
     }
 
     _acceptQuest() {
         _hide();
         this._questDone = true;
         setQuestActive(true);
-        this._phase = 'after';
-        this._afterIdx = 0;
-        _show(DIALOGUE_AFTER[0]);
+        this._phase = 'chat';
+        this._chatLines = ["Obrigada! Já sabes, flores brilhantes pela floresta. 🌸"];
+        this._lineIdx = 0;
+        _show(this._chatLines[0]);
         this._play('talking');
     }
 
@@ -165,14 +194,19 @@ export class Fox {
         this._play('idle');
     }
 
-    _advanceAfter() {
-        this._afterIdx++;
-        if (this._afterIdx >= DIALOGUE_AFTER.length) {
+    _advanceLine() {
+        this._lineIdx++;
+        if (this._lineIdx >= this._chatLines.length) {
             _hide();
             this._phase = 'idle';
             this._play('idle');
+            // Se acabou o diálogo de conclusão, disparar recompensa
+            if (this._missionComplete && this._onComplete) {
+                this._onComplete();
+                this._onComplete = null; // só uma vez
+            }
         } else {
-            _show(DIALOGUE_AFTER[this._afterIdx]);
+            _show(this._chatLines[this._lineIdx]);
         }
     }
 
@@ -184,8 +218,7 @@ export class Fox {
         const dz = playerPos.z - POSITION.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
 
-        // Durante diálogo ativo não alterar estado
-        if (this._phase === 'quest' || this._phase === 'after') {
+        if (this._phase === 'quest' || this._phase === 'chat' || this._phase === 'complete') {
             _prompt.style.display = 'none';
             return;
         }
@@ -196,15 +229,7 @@ export class Fox {
             if (this._pendingTalk) {
                 this._pendingTalk = false;
                 _prompt.style.display = 'none';
-                if (this._questDone) {
-                    // Missão já aceite — diálogo curto
-                    this._phase = 'after';
-                    this._afterIdx = 0;
-                    _show(DIALOGUE_AFTER[0]);
-                    this._play('talking');
-                } else {
-                    this._startQuest();
-                }
+                this._startConversation();
             }
         } else if (dist < WAVE_RADIUS) {
             _prompt.style.display = 'none';

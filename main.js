@@ -19,7 +19,8 @@ import { createCampfireLight } from './lights/CampfireLight.js';
 import { createStructureLights } from './lights/StructureLights.js';
 import { createDashboard }    from './ui/Dashboard.js';
 import { createRain, updateRain, getRainIntensity } from './world/Rain.js';
-import { initSounds, updateAmbient, updateShine, updateFireplace } from './world/SoundManager.js';
+import { initSounds, updateAmbient, updateShine, updateFireplace, playUnlock } from './world/SoundManager.js';
+import { startReward, updateReward } from './entities/player/QuestReward.js';
 
 // ─── LOADING SCREEN ──────────────────────────────────────────────────────────
 const _loadingScreen = document.getElementById('loading-screen');
@@ -100,6 +101,11 @@ raccoon.modelLoaded.then(async () => {
     const dashboard     = createDashboard(climate, campfire, structureLights, scene);
     const fpsDisplay    = dashboard._fpsDisplay;
 
+    // Recompensa da missão — disparada pela Fox quando o diálogo de conclusão termina
+    fox.onMissionComplete(() => {
+        startReward(scene, raccoon.model, playUnlock);
+    });
+
     const clock = new THREE.Clock();
 
     function animate() {
@@ -127,6 +133,7 @@ raccoon.modelLoaded.then(async () => {
 
         raccoon.update(delta, keyStates);
         fox.update(delta, raccoon.model.position);
+        updateReward(delta);
         updateForest(delta, raccoon.model.position);
 
         if (world.basin) updateWater(world.basin, delta);

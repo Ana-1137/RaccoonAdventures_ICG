@@ -53,6 +53,7 @@ export async function initSounds() {
         _load('fireplace', SETTINGS.effects.fireplace, _effectsGain),
         _load('shine', SETTINGS.effects.shine, _effectsGain),
         _load('collect', SETTINGS.effects.collect, _effectsGain),
+        _load('unlock', { file: 'sounds/unlock.mp3' }, _effectsGain),
     ]);
 
     _playLoop('day', 0);
@@ -103,6 +104,12 @@ export function updateShine(proximity) {
 export function playCollect() {
     if (!_ctx || !_enabled) return;
     _playOnce('collect', SETTINGS.effects.collect.volume);
+}
+
+/** Toca som de unlock (one-shot). */
+export function playUnlock() {
+    if (!_ctx || !_enabled) return;
+    _playOnce('unlock', 0.9);
 }
 
 export function setAudioEnabled(val) {
