@@ -14,10 +14,9 @@ let _onClose   = null;
 let _savedCamPos   = null;  // posição da câmara antes do showcase
 let _savedCamQuat  = null;
 
-const ORBIT_RADIUS = 1.2;   // distância da câmara à flor
-const ORBIT_SPEED  = 0.7;
-const FLOWER_Y     = 3.5;
-const SHOWCASE_POS = new THREE.Vector3(0, FLOWER_Y, 0);
+const ORBIT_RADIUS = 1.5;
+const ORBIT_SPEED  = 0.6;
+const SHOWCASE_POS = new THREE.Vector3(0, 1, 1);
 
 // ─── Overlay ─────────────────────────────────────────────────────────────────
 const _overlay = document.createElement('div');
@@ -77,10 +76,13 @@ export async function startShowcase(scene, camera, orbitControls, itemId, itemNa
     const gltf = await loadGLTF(getAssetPath('elements/Flower.glb'));
     _mesh = cloneScene(gltf);
     _mesh.scale.setScalar(0.3);
-    // Sem rotação — flor fica vertical, visível de lado
     _mesh.position.copy(SHOWCASE_POS);
     _mesh.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
     scene.add(_mesh);
+
+    // Posicionar câmara imediatamente à frente da flor
+    camera.position.set(SHOWCASE_POS.x, SHOWCASE_POS.y, SHOWCASE_POS.z + ORBIT_RADIUS);
+    camera.lookAt(SHOWCASE_POS);
 
     _glitter = _createGlitter(scene, SHOWCASE_POS);
 
