@@ -118,11 +118,11 @@ export function updateShowcase(delta) {
     // Flor roda no lugar
     _mesh.rotation.z += delta * 1.5;
 
-    // Câmara orbita horizontalmente ao mesmo nível Y da flor — closeup lateral
+    // Câmara orbita em círculo ligeiramente acima da flor, focada nela
     const angle = _time * ORBIT_SPEED;
     _camera.position.set(
         SHOWCASE_POS.x + Math.cos(angle) * ORBIT_RADIUS,
-        SHOWCASE_POS.y,          // mesmo Y — câmara ao nível da flor
+        SHOWCASE_POS.y + 0.08,   // ligeiramente acima
         SHOWCASE_POS.z + Math.sin(angle) * ORBIT_RADIUS
     );
     _camera.lookAt(SHOWCASE_POS);
