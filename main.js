@@ -14,7 +14,7 @@ import { updateWater }        from './entities/environment/Water.js';
 import { updateFish }         from './entities/environment/Fish.js';
 import { updateFireflies }    from './entities/environment/Fireflies.js';
 import { updateBirds }        from './entities/environment/Birds.js';
-import { updateFlowers, getFlowerCount, getNearestFlowerProximity } from './entities/environment/Flowers.js';
+import { updateFlowers, getFlowerCount, getNearestFlowerProximity, getQuestActive } from './entities/environment/Flowers.js';
 import { createCampfireLight } from './lights/CampfireLight.js';
 import { createStructureLights } from './lights/StructureLights.js';
 import { createDashboard }    from './ui/Dashboard.js';
@@ -79,7 +79,7 @@ window.addEventListener('keydown', _startAudio);
 // ─── CONTADOR DE FLORES (HUD) ────────────────────────────────────────────────
 const _flowerHUD = document.createElement('div');
 _flowerHUD.style.cssText = 'position:fixed;bottom:16px;left:16px;color:#fff;font-family:sans-serif;font-size:1rem;text-shadow:0 1px 3px #000;pointer-events:none;';
-_flowerHUD.textContent = '🌸 0 / 0';
+_flowerHUD.textContent = '🦊 Falar com a raposa';
 document.body.appendChild(_flowerHUD);
 
 // ─── GUAXINIM ────────────────────────────────────────────────────────────────
@@ -140,11 +140,13 @@ raccoon.modelLoaded.then(async () => {
         // Flores — coleta por proximidade
         const collected = updateFlowers(raccoon.model.position, delta);
         const { total } = getFlowerCount();
-        _flowerHUD.textContent = `🌸 ${collected} / ${total}`;
+        _flowerHUD.textContent = getQuestActive()
+            ? `🌸 ${collected} / ${total}`
+            : '🦊 Falar com a raposa';
 
         // Áudio
         updateAmbient(climate.getHour(), getRainIntensity());
-        updateShine(getNearestFlowerProximity(raccoon.model.position));
+        updateShine(getQuestActive() ? getNearestFlowerProximity(raccoon.model.position) : 0);
         updateFireplace(raccoon.model.position, campfire.settings.enabled);
 
         thirdPersonCamera.update(isMoving, orbitControls, isRunning);

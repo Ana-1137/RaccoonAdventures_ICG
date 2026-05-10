@@ -22,6 +22,11 @@ const _flowers = [];  // { mesh, collected, sparklePts, sparklePhases }
 let _collected = 0;
 let _total = 0;
 let _onCollect = null;
+let _questActive = false;  // bloqueado até a Fox aceitar a missão
+
+/** Ativa a missão de coleta — chamado pela Fox ao aceitar. */
+export function setQuestActive(val) { _questActive = val; }
+export function getQuestActive() { return _questActive; }
 
 /** Cria o sistema de partículas brilhantes de uma flor (invisível por defeito). */
 function _createSparkle(scene, x, z) {
@@ -114,9 +119,16 @@ export function updateFlowers(playerPos, delta) {
         const dz = playerPos.z - f.mesh.position.z;
         const d2 = dx * dx + dz * dz;
 
+        // ── Partículas e coleta só quando missão ativa ───────────────────────
+        const { pts } = f.sparkle;
+        if (!_questActive) {
+            pts.visible = false;
+            continue;
+        }
+
         // ── Partículas brilhantes ────────────────────────────────────────────
         const near = d2 < sparkleR2;
-        const { pts, phases, baseX, baseZ } = f.sparkle;
+        const { phases, baseX, baseZ } = f.sparkle;
         pts.visible = near;
         if (near) {
             const targetOpacity = 0.5 + 0.5 * (1 - Math.sqrt(d2) / SETTINGS.sparkleRadius);
