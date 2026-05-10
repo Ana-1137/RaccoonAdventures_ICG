@@ -102,7 +102,7 @@ export class Fox {
         const loader = new FBXLoader();
         loader.load(getAssetPath('elements/fox.fbx'), (fbx) => {
             this.model = fbx;
-            this.model.scale.setScalar(0.012);
+            this.model.scale.setScalar(0.1);
             this.model.position.set(POSITION.x, POSITION.y, POSITION.z);
             this.model.rotation.y = -Math.PI / 2;
             this.model.traverse(c => {
