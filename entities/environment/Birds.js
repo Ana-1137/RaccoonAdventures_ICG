@@ -71,10 +71,10 @@ export function createBirds(scene) {
         const { group, pivotL, pivotR } = createBirdMesh(color);
 
         const angle = (i / count) * Math.PI * 2;
-        const spd   = speed.min + Math.random() * (speed.max - speed.min);
-        const y     = orbit.yMin + Math.random() * (orbit.yMax - orbit.yMin);
+        const spd = speed.min + Math.random() * (speed.max - speed.min);
+        const y = orbit.yMin + Math.random() * (orbit.yMax - orbit.yMin);
         const phase = Math.random() * Math.PI * 2;
-        const dir   = i % 2 === 0 ? 1 : -1;
+        const dir = i % 2 === 0 ? 1 : -1;
 
         group.position.set(
             orbit.centerX + Math.cos(angle) * orbit.radiusX,
@@ -82,7 +82,7 @@ export function createBirds(scene) {
             orbit.centerZ + Math.sin(angle) * orbit.radiusZ
         );
 
-        group.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
+        group.traverse(o => { if (o.isMesh) o.raycast = () => { }; });
         scene.add(group);
 
         _birds.push({ group, pivotL, pivotR, angle, spd, dir, y, phase });
@@ -112,12 +112,12 @@ export function updateBirds(delta, hour) {
 
         // Orientar na direção do movimento
         const tx = -b.dir * Math.sin(b.angle) * orbit.radiusX;
-        const tz =  b.dir * Math.cos(b.angle) * orbit.radiusZ;
+        const tz = b.dir * Math.cos(b.angle) * orbit.radiusZ;
         b.group.rotation.y = Math.atan2(tx, tz);
 
         // Bater asas no eixo X (cima/baixo) — funciona independentemente da rotação Y do grupo
         const flap = Math.sin(now * wing.flapSpeed + b.phase) * wing.flapAngle;
-        b.pivotL.rotation.x =  flap;
+        b.pivotL.rotation.x = flap;
         b.pivotR.rotation.x = -flap;
     }
 }
