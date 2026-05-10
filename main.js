@@ -101,7 +101,7 @@ raccoon.modelLoaded.then(async () => {
     const { total } = getFlowerCount();
     _flowerHUD.textContent = `🌸 0 / ${total}`;
 
-    const thirdPersonCamera = new ThirdPersonCamera(camera, raccoon.model, renderer.domElement, orbitControls);
+    const thirdPersonCamera = new ThirdPersonCamera(camera, raccoon.model, renderer.domElement, orbitControls, scene);
     const campfire      = createCampfireLight(scene);
     const structureLights = createStructureLights(scene);
     const dashboard     = createDashboard(climate, campfire, structureLights, scene);

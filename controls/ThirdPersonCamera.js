@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 
 class ThirdPersonCamera {
-    constructor(camera, target, domElement, orbitControls) {
+    constructor(camera, target, domElement, orbitControls, scene = null) {
         this.camera = camera;
         this.target = target;
+        this._scene = scene;
         this.isInteracting = false;
         this._dialogueLock = false;      // true durante diálogo com Fox
         this._dialogueTarget = null;     // posição do NPC para olhar
@@ -95,22 +96,39 @@ class ThirdPersonCamera {
         if (!this.isInteracting && isMoving) {
             const idealOffset = this.defaultOffsetDirection.clone().applyQuaternion(this.target.quaternion);
             
-            // Adicionar um tremor ultra-subtil se estiver a correr
             if (isRunning) {
                 idealOffset.x += (Math.random() - 0.5) * 0.015;
                 idealOffset.y += (Math.random() - 0.5) * 0.015;
             }
 
             const idealPosition = targetPos.clone().add(idealOffset.multiplyScalar(targetDistance));
-
-            // Lerp para posição e zoom
             this.camera.position.lerp(idealPosition, 0.1);
             this.camera.lookAt(targetPos);
         } else if (!this.isInteracting) {
-            // Focagem manual
             this.camera.lookAt(targetPos);
         }
+
+        // ── Evitar câmara dentro de objetos (occlusion pull) ─────────────────
+        this._avoidOcclusion(targetPos);
     }
-}
+
+    _avoidOcclusion(targetPos) {
+        if (!this._scene) return;
+        if (!this._occRaycaster) this._occRaycaster = new THREE.Raycaster();
+        const dir = this.camera.position.clone().sub(targetPos);
+        const dist = dir.length();
+        if (dist < 0.01) return;
+        this._occRaycaster.set(targetPos, dir.normalize());
+        this._occRaycaster.far = dist;
+        const candidates = this._scene.children.filter(
+            o => o !== this.target && o.type !== 'Light' && !o.userData?.isParticles
+        );
+        const hits = this._occRaycaster.intersectObjects(candidates, true)
+            .filter(h => h.object.visible && h.face); // só meshes sólidos com face
+        if (hits.length > 0) {
+            const safePos = targetPos.clone().add(dir.multiplyScalar(Math.max(0.05, hits[0].distance - 0.1)));
+            this.camera.position.copy(safePos);
+        }
+    }
 
 export { ThirdPersonCamera };
