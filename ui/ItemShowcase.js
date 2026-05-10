@@ -12,9 +12,12 @@ let _camera    = null;
 let _orbitCtrl = null;
 let _onClose   = null;
 
-const ORBIT_RADIUS = 0.6;
+const ORBIT_RADIUS = 0.18;  // bem perto — closeup
 const ORBIT_Y      = 0.3;
-const ORBIT_SPEED  = 0.8;   // rad/s
+const ORBIT_SPEED  = 0.8;
+
+// Ponto fixo elevado, sem conflito com a cena
+const SHOWCASE_POS = new THREE.Vector3(0, 3.5, 0);
 
 // ─── Overlay "clica para guardar" ────────────────────────────────────────────
 const _overlay = document.createElement('div');
@@ -78,10 +81,10 @@ export async function startShowcase(scene, camera, orbitControls, itemId, itemNa
     _onClose   = onClose;
     _time      = 0;
 
-    // Centro do showcase: posição fornecida ou origem
-    const cx = worldPos ? worldPos.x : 0;
-    const cy = worldPos ? worldPos.y + ORBIT_Y + 0.6 : ORBIT_Y;
-    const cz = worldPos ? worldPos.z : 0;
+    // Centro fixo elevado — sem conflito com a cena
+    const cx = SHOWCASE_POS.x;
+    const cy = SHOWCASE_POS.y;
+    const cz = SHOWCASE_POS.z;
 
     orbitControls.enabled = false;
 
