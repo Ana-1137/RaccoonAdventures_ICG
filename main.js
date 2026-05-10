@@ -5,6 +5,7 @@ import { createLights }       from './lights/SceneLights.js';
 import { createClimate }      from './world/Climate.js';
 import { buildWorld }         from './world/World.js';
 import { Raccoon }            from './entities/player/Raccoon.js';
+import { Fox }               from './entities/environment/Fox.js';
 import { ThirdPersonCamera }  from './controls/ThirdPersonCamera.js';
 import { keyStates }          from './controls/KeyboardControls.js';
 import { createTouchControls } from './controls/TouchControls.js';
@@ -83,6 +84,7 @@ document.body.appendChild(_flowerHUD);
 
 // ─── GUAXINIM ────────────────────────────────────────────────────────────────
 const raccoon = new Raccoon(scene);
+const fox = new Fox(scene);
 
 raccoon.modelLoaded.then(async () => {
     setProgress(5, 'Guaxinim carregado...');
@@ -124,6 +126,7 @@ raccoon.modelLoaded.then(async () => {
         campfire.update(raccoon.model.position, delta);
 
         raccoon.update(delta, keyStates);
+        fox.update(delta, raccoon.model.position);
         updateForest(delta, raccoon.model.position);
 
         if (world.basin) updateWater(world.basin, delta);
