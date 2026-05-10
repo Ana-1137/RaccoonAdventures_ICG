@@ -4,8 +4,8 @@ import { getValeCenterXAtZ, GROUND_SETTINGS } from '../../world/Ground.js';
 // ─── CONFIGURAÇÃO CENTRAL ────────────────────────────────────────────────────
 const SETTINGS = {
     orbits: [
-        { z: -3.0, xOffset: +2 }, { z: -1.5 }, { z:  0.0 },
-        { z:  1.5 }, { z:  3.0, xOffset: -2 }, { z:  3.8, xOffset: -2 },
+        { z: -3.0, xOffset: +1 }, { z: -1.5 }, { z:  0.0 },
+        { z:  1.5 }, { z:  3.0, xOffset: -1 }, { z:  3.8, xOffset: -1 },
     ],
     orbit: {
         radiusX: 0.12,   // pequeno — mantém peixe no centro do vale
