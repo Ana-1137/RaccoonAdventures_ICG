@@ -14,9 +14,8 @@ let _onClose   = null;
 let _savedCamPos   = null;  // posição da câmara antes do showcase
 let _savedCamQuat  = null;
 
-const ORBIT_RADIUS = 0.22;  // distância da câmara à flor
-const ORBIT_SPEED  = 0.7;   // rad/s
-// Flor fica a esta altura — câmara orbita ao mesmo nível Y
+const ORBIT_RADIUS = 1.2;   // distância da câmara à flor
+const ORBIT_SPEED  = 0.7;
 const FLOWER_Y     = 3.5;
 const SHOWCASE_POS = new THREE.Vector3(0, FLOWER_Y, 0);
 
@@ -77,7 +76,7 @@ export async function startShowcase(scene, camera, orbitControls, itemId, itemNa
 
     const gltf = await loadGLTF(getAssetPath('elements/Flower.glb'));
     _mesh = cloneScene(gltf);
-    _mesh.scale.setScalar(0.07);
+    _mesh.scale.setScalar(0.4);
     _mesh.rotation.x = -Math.PI / 2;
     _mesh.position.copy(SHOWCASE_POS);
     _mesh.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
