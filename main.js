@@ -12,6 +12,7 @@ import { update as updateForest } from './entities/environment/Forest.js';
 import { updateWater }        from './entities/environment/Water.js';
 import { updateFish }         from './entities/environment/Fish.js';
 import { updateFireflies }    from './entities/environment/Fireflies.js';
+import { updateBirds }        from './entities/environment/Birds.js';
 import { updateFlowers, getFlowerCount, getNearestFlowerProximity } from './entities/environment/Flowers.js';
 import { createCampfireLight } from './lights/CampfireLight.js';
 import { createStructureLights } from './lights/StructureLights.js';
@@ -128,6 +129,7 @@ raccoon.modelLoaded.then(async () => {
         if (world.basin) updateWater(world.basin, delta);
         updateFish(delta);
         updateFireflies(delta, climate.getHour());
+        updateBirds(delta, climate.getHour());
 
         // Chuva — centrada na câmara
         updateRain(delta, camera.position);

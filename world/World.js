@@ -10,6 +10,7 @@ import { createWater, WATER_SETTINGS } from '../entities/environment/Water.js';
 import { createFish } from '../entities/environment/Fish.js';
 import { createFireflies } from '../entities/environment/Fireflies.js';
 import { createFlowers } from '../entities/environment/Flowers.js';
+import { createBirds } from '../entities/environment/Birds.js';
 import { playCollect } from './SoundManager.js';
 
 /**
@@ -51,6 +52,7 @@ export async function buildWorld(scene, raccoon, onProgress = null) {
 
     createFish(scene);
     createFireflies(scene);
+    createBirds(scene);
     progress(85, 'Fauna criada...');
 
     // ── Flores: após floresta, mesmas zonas de exclusão ──────────────────────
