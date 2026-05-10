@@ -14,7 +14,7 @@ import { updateWater }        from './entities/environment/Water.js';
 import { updateFish }         from './entities/environment/Fish.js';
 import { updateFireflies }    from './entities/environment/Fireflies.js';
 import { updateBirds }        from './entities/environment/Birds.js';
-import { updateFlowers, getFlowerCount, getNearestFlowerProximity, getQuestActive } from './entities/environment/Flowers.js';
+import { updateFlowers, getFlowerCount, getNearestFlowerProximity, getQuestActive, setQuestActive, cheatCollectAll } from './entities/environment/Flowers.js';
 import { createCampfireLight } from './lights/CampfireLight.js';
 import { createStructureLights } from './lights/StructureLights.js';
 import { createDashboard }    from './ui/Dashboard.js';
@@ -77,6 +77,11 @@ createRain(scene);
 const _startAudio = () => { initSounds(); window.removeEventListener('pointerdown', _startAudio); window.removeEventListener('keydown', _startAudio); };
 window.addEventListener('pointerdown', _startAudio);
 window.addEventListener('keydown', _startAudio);
+
+// ─── CHEAT: X coleta todas as flores (teste) ─────────────────────────────────
+window.addEventListener('keydown', e => {
+    if (e.code === 'KeyX') { setQuestActive(true); cheatCollectAll(); }
+});
 
 // ─── CONTADOR DE FLORES (HUD) ────────────────────────────────────────────────
 const _flowerHUD = document.createElement('div');

@@ -11,20 +11,20 @@ let _time      = 0;
 let _camera    = null;
 let _orbitCtrl = null;
 let _onClose   = null;
+let _savedCamPos   = null;  // posição da câmara antes do showcase
+let _savedCamQuat  = null;
 
-const ORBIT_RADIUS = 0.18;  // bem perto — closeup
-const ORBIT_Y      = 0.3;
-const ORBIT_SPEED  = 0.8;
+const ORBIT_RADIUS = 0.22;  // distância da câmara à flor
+const ORBIT_SPEED  = 0.7;   // rad/s
+// Flor fica a esta altura — câmara orbita ao mesmo nível Y
+const FLOWER_Y     = 3.5;
+const SHOWCASE_POS = new THREE.Vector3(0, FLOWER_Y, 0);
 
-// Ponto fixo elevado, sem conflito com a cena
-const SHOWCASE_POS = new THREE.Vector3(0, 3.5, 0);
-
-// ─── Overlay "clica para guardar" ────────────────────────────────────────────
+// ─── Overlay ─────────────────────────────────────────────────────────────────
 const _overlay = document.createElement('div');
 _overlay.style.cssText = `
     position:fixed; inset:0; display:none; align-items:flex-end;
-    justify-content:center; padding-bottom:40px; z-index:3000;
-    pointer-events:none;
+    justify-content:center; padding-bottom:40px; z-index:3000; pointer-events:none;
 `;
 const _hint = document.createElement('div');
 _hint.style.cssText = `
@@ -42,38 +42,26 @@ function _createGlitter(scene, pos) {
     const positions = new Float32Array(count * 3);
     const phases    = new Float32Array(count);
     for (let i = 0; i < count; i++) {
-        positions[i * 3]     = pos.x + (Math.random() - 0.5) * 0.3;
-        positions[i * 3 + 1] = pos.y + Math.random() * 0.4;
-        positions[i * 3 + 2] = pos.z + (Math.random() - 0.5) * 0.3;
+        positions[i * 3]     = pos.x + (Math.random() - 0.5) * 0.2;
+        positions[i * 3 + 1] = pos.y + (Math.random() - 0.5) * 0.2;
+        positions[i * 3 + 2] = pos.z + (Math.random() - 0.5) * 0.2;
         phases[i] = Math.random() * Math.PI * 2;
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const mat = new THREE.PointsMaterial({
-        color: 0xffee44, size: 0.04, sizeAttenuation: true,
+        color: 0xffee44, size: 0.05, sizeAttenuation: true,
         transparent: true, opacity: 0.9, depthWrite: false,
     });
     const pts = new THREE.Points(geo, mat);
     pts.userData.isParticles = true;
     pts._phases = phases;
-    pts._basePos = pos.clone();
     scene.add(pts);
     return pts;
 }
 
-// ─── API pública ─────────────────────────────────────────────────────────────
-
-/**
- * Inicia o showcase do item desbloqueado.
- * @param {THREE.Scene}    scene
- * @param {THREE.Camera}   camera
- * @param {object}         orbitControls
- * @param {string}         itemId
- * @param {string}         itemName
- * @param {string}         itemIcon
- * @param {Function}       [onClose]
- */
-export async function startShowcase(scene, camera, orbitControls, itemId, itemName, itemIcon, worldPos = null, onClose = null) {
+// ─── API ─────────────────────────────────────────────────────────────────────
+export async function startShowcase(scene, camera, orbitControls, itemId, itemName, itemIcon, _unused = null, onClose = null) {
     if (_active) return;
     _active    = true;
     _camera    = camera;
@@ -81,24 +69,21 @@ export async function startShowcase(scene, camera, orbitControls, itemId, itemNa
     _onClose   = onClose;
     _time      = 0;
 
-    // Centro fixo elevado — sem conflito com a cena
-    const cx = SHOWCASE_POS.x;
-    const cy = SHOWCASE_POS.y;
-    const cz = SHOWCASE_POS.z;
+    // Guardar estado da câmara para restaurar depois
+    _savedCamPos  = camera.position.clone();
+    _savedCamQuat = camera.quaternion.clone();
 
     orbitControls.enabled = false;
 
     const gltf = await loadGLTF(getAssetPath('elements/Flower.glb'));
     _mesh = cloneScene(gltf);
-    _mesh.scale.setScalar(0.06);
+    _mesh.scale.setScalar(0.07);
     _mesh.rotation.x = -Math.PI / 2;
-    _mesh.position.set(cx, cy, cz);
+    _mesh.position.copy(SHOWCASE_POS);
     _mesh.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
     scene.add(_mesh);
 
-    _glitter = _createGlitter(scene, new THREE.Vector3(cx, cy, cz));
-    // Store center for updateShowcase
-    _glitter._center = new THREE.Vector3(cx, cy, cz);
+    _glitter = _createGlitter(scene, SHOWCASE_POS);
 
     _overlay.style.display = 'flex';
     _hint.onclick = () => _close(scene, itemId, itemName, itemIcon);
@@ -115,8 +100,14 @@ function _close(scene, itemId, itemName, itemIcon) {
     _overlay.style.display = 'none';
     _orbitCtrl.enabled = true;
 
-    addItem(itemId, itemName, itemIcon);
+    // Restaurar câmara
+    if (_savedCamPos) {
+        _camera.position.copy(_savedCamPos);
+        _camera.quaternion.copy(_savedCamQuat);
+        _savedCamPos = null; _savedCamQuat = null;
+    }
 
+    addItem(itemId, itemName, itemIcon);
     if (_onClose) { _onClose(); _onClose = null; }
 }
 
@@ -124,26 +115,28 @@ export function updateShowcase(delta) {
     if (!_active || !_mesh) return;
     _time += delta;
 
-    _mesh.rotation.z += delta * 1.2;
+    // Flor roda no lugar
+    _mesh.rotation.z += delta * 1.5;
 
-    const center = _glitter?._center ?? new THREE.Vector3(0, ORBIT_Y, 0);
+    // Câmara orbita horizontalmente ao mesmo nível Y da flor — closeup lateral
     const angle = _time * ORBIT_SPEED;
     _camera.position.set(
-        center.x + Math.cos(angle) * ORBIT_RADIUS,
-        center.y + 0.25,
-        center.z + Math.sin(angle) * ORBIT_RADIUS
+        SHOWCASE_POS.x + Math.cos(angle) * ORBIT_RADIUS,
+        SHOWCASE_POS.y,          // mesmo Y — câmara ao nível da flor
+        SHOWCASE_POS.z + Math.sin(angle) * ORBIT_RADIUS
     );
-    _camera.lookAt(center);
+    _camera.lookAt(SHOWCASE_POS);
 
+    // Glitter orbita à volta da flor
     if (_glitter) {
         const pos = _glitter.geometry.attributes.position;
-        const bp  = _glitter._center;
         const now = Date.now() * 0.001;
         for (let i = 0; i < 40; i++) {
             const ph = _glitter._phases[i];
-            pos.array[i * 3]     = bp.x + Math.cos(now * 1.5 + ph) * 0.25;
-            pos.array[i * 3 + 1] = bp.y + ((now * 0.3 + ph * 0.5) % 0.5);
-            pos.array[i * 3 + 2] = bp.z + Math.sin(now * 1.5 + ph) * 0.25;
+            const r  = 0.12 + Math.sin(now + ph) * 0.06;
+            pos.array[i * 3]     = SHOWCASE_POS.x + Math.cos(now * 1.5 + ph) * r;
+            pos.array[i * 3 + 1] = SHOWCASE_POS.y + Math.sin(now * 2.0 + ph) * r;
+            pos.array[i * 3 + 2] = SHOWCASE_POS.z + Math.sin(now * 1.2 + ph) * r;
         }
         pos.needsUpdate = true;
     }

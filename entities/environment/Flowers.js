@@ -160,6 +160,18 @@ export function updateFlowers(playerPos, delta) {
 
 export function getFlowerCount() { return { collected: _collected, total: _total }; }
 
+/** Cheat: coleta todas as flores instantaneamente (só para teste). */
+export function cheatCollectAll() {
+    for (const f of _flowers) {
+        if (f.collected) continue;
+        f.collected = true;
+        f.mesh.visible = false;
+        f.sparkle.pts.visible = false;
+        _collected++;
+    }
+    if (_onCollect) _onCollect(_collected, _total);
+}
+
 /** Retorna proximidade 0-1 à flor não coletada mais próxima (1 = em cima, 0 = fora do raio).
  *  soundRange > sparkleRadius para o som ativar antes do brilho visual. */
 export function getNearestFlowerProximity(playerPos, soundRange = 3.5) {
