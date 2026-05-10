@@ -75,7 +75,7 @@ export async function startShowcase(scene, camera, orbitControls, itemId, itemNa
 
     const gltf = await loadGLTF(getAssetPath('elements/Flower.glb'));
     _mesh = cloneScene(gltf);
-    _mesh.scale.setScalar(0.3);
+    _mesh.scale.setScalar(0.08);
     _mesh.position.copy(SHOWCASE_POS);
     _mesh.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
     scene.add(_mesh);
@@ -123,7 +123,7 @@ export function updateShowcase(delta) {
     const angle = _time * ORBIT_SPEED;
     _camera.position.set(
         SHOWCASE_POS.x + Math.cos(angle) * ORBIT_RADIUS,
-        SHOWCASE_POS.y + 0.3,
+        SHOWCASE_POS.y,   // mesmo Y — orbita horizontal como microondas
         SHOWCASE_POS.z + Math.sin(angle) * ORBIT_RADIUS
     );
     _camera.lookAt(SHOWCASE_POS);
