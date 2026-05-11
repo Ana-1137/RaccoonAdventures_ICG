@@ -348,14 +348,13 @@ class Raccoon {
         const isRunning = isMoving && input.run;
         const isTerrified = (this.currentState === STATES.TERRIFIED || this.currentState === STATES.TERRIFIED_LOOP);
 
-        // ── Água: y ≤ -0.05 → animação de treading water ────────────────────
-        const inWater = this.model.position.y <= -0.05;
+        // ── Água: y ≤ -0.12 → animação de treading water (mantém movimento) ──
+        const inWater = this.model.position.y <= -0.12;
         if (inWater) {
             if (this.currentState !== STATES.SWIMMING) {
                 this.currentState = STATES.SWIMMING;
                 this.fadeToAction('treading_water', 0.3);
             }
-            return;
         } else if (this.currentState === STATES.SWIMMING) {
             this.currentState = STATES.IDLE;
             this.fadeToAction('idle', 0.3);
@@ -445,9 +444,9 @@ class Raccoon {
         const isBlockedByFear = (isTerrified && input.forward);
 
         if (isMoving && !isBlockedByFear) {
-            this._handleMovement(delta, isRunning, input);
+            this._handleMovement(delta, isRunning, input, inWater);
         } else {
-            this._handleIdle(delta);
+            this._handleIdle(delta, inWater);
         }
     }
 
@@ -633,11 +632,11 @@ class Raccoon {
         if (input.left) this.model.rotateY(rotate);
         if (input.right) this.model.rotateY(-rotate);
 
-        if (isRunning) {
+        if (isRunning && this.currentState !== STATES.SWIMMING) {
             this._handleRunningAnimation(input);
             this.lastMoveState = 'RUN';
         } else {
-            if (this.currentState !== STATES.WALK) {
+            if (this.currentState !== STATES.WALK && this.currentState !== STATES.SWIMMING) {
                 this.fadeToAction('walk', SETTINGS.blend.toWalk, true);
                 this.currentState = STATES.WALK;
             }
@@ -699,7 +698,8 @@ class Raccoon {
         if (this.currentState !== STATES.IDLE &&
             this.currentState !== STATES.WOBBLE &&
             this.currentState !== STATES.TERRIFIED &&
-            this.currentState !== STATES.TERRIFIED_LOOP) {
+            this.currentState !== STATES.TERRIFIED_LOOP &&
+            this.currentState !== STATES.SWIMMING) {
             // Wobble apenas se o último movimento foi corrida; senão vai para idle
             const targetAnim = (this.lastMoveState === 'RUN') ? 'wobble' : 'idle';
             this.fadeToAction(targetAnim, SETTINGS.blend.toIdle);
