@@ -75,6 +75,7 @@ const STATES = {
     STANDING_UP: 'STANDING_UP',
     TERRIFIED: 'TERRIFIED',
     TERRIFIED_LOOP: 'TERRIFIED_LOOP',
+    SWIMMING: 'SWIMMING',
 };
 
 // ─── Mapeamento de animações FBX ─────────────────────────────────────────────
@@ -91,6 +92,7 @@ const ANIM_FILES = [
     { name: 'sit', file: 'Stand To Sit.fbx' },
     { name: 'stand', file: 'Sit To Stand.fbx' },
     { name: 'terrified', file: 'Terrified.fbx' },
+    { name: 'treading_water', file: 'Treading Water.fbx' },
 ];
 
 /** Animações que devem tocar apenas uma vez e parar no último frame. */
@@ -345,6 +347,19 @@ class Raccoon {
         const isMoving = input.forward || input.backward || input.left || input.right;
         const isRunning = isMoving && input.run;
         const isTerrified = (this.currentState === STATES.TERRIFIED || this.currentState === STATES.TERRIFIED_LOOP);
+
+        // ── Água: y ≤ -0.05 → animação de treading water ────────────────────
+        const inWater = this.model.position.y <= -0.05;
+        if (inWater) {
+            if (this.currentState !== STATES.SWIMMING) {
+                this.currentState = STATES.SWIMMING;
+                this.fadeToAction('treading_water', 0.3);
+            }
+            return;
+        } else if (this.currentState === STATES.SWIMMING) {
+            this.currentState = STATES.IDLE;
+            this.fadeToAction('idle', 0.3);
+        }
 
         if (isMoving || input.jump || isTerrified) this.idleTimer = 0;
 
