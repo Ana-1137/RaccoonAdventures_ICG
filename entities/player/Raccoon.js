@@ -348,9 +348,13 @@ class Raccoon {
         const isRunning = isMoving && input.run;
         const isTerrified = (this.currentState === STATES.TERRIFIED || this.currentState === STATES.TERRIFIED_LOOP);
 
-        // ── Água: y ≤ -0.12 → animação de treading water (mantém movimento) ──
+        // ── Água: y ≤ -0.12 → flutuar na superfície, sem shift ──────────────
         const inWater = this.model.position.y <= -0.12;
         if (inWater) {
+            // Fixar Y à superfície da água
+            this.model.position.y = -0.1;
+            this.verticalVelocity = 0;
+            this.isGrounded = true;
             if (this.currentState !== STATES.SWIMMING) {
                 this.currentState = STATES.SWIMMING;
                 this.fadeToAction('treading_water', 0.3);
@@ -544,7 +548,7 @@ class Raccoon {
     _handleMovement(delta, isRunning, input) {
         this.idleTimer = 0;
 
-        const speed = (isRunning ? SETTINGS.speed.run : SETTINGS.speed.walk) * delta * SETTINGS.model.scale;
+        const speed = (isRunning && this.currentState !== STATES.SWIMMING ? SETTINGS.speed.run : SETTINGS.speed.walk) * delta * SETTINGS.model.scale;
         const rotate = SETTINGS.speed.rotate * delta;
 
         // ── Ledge check preventivo ──────────────────────────────────
