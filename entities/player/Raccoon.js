@@ -351,10 +351,6 @@ class Raccoon {
         // ── Água: y ≤ -0.12 → flutuar na superfície, sem shift ──────────────
         const inWater = this.model.position.y <= -0.12;
         if (inWater) {
-            // Fixar Y à superfície da água
-            this.model.position.y = -0.1;
-            this.verticalVelocity = 0;
-            this.isGrounded = true;
             if (this.currentState !== STATES.SWIMMING) {
                 this.currentState = STATES.SWIMMING;
                 this.fadeToAction('treading_water', 0.3);
@@ -451,6 +447,12 @@ class Raccoon {
             this._handleMovement(delta, isRunning, input, inWater);
         } else {
             this._handleIdle(delta, inWater);
+        }
+
+        // ── Clamp de água: após física, impedir afundar abaixo da superfície ─
+        if (this.currentState === STATES.SWIMMING) {
+            this.model.position.y = -0.1;
+            this.verticalVelocity = 0;
         }
     }
 
