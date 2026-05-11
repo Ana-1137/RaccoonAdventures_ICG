@@ -348,14 +348,12 @@ class Raccoon {
         const isRunning = isMoving && input.run;
         const isTerrified = (this.currentState === STATES.TERRIFIED || this.currentState === STATES.TERRIFIED_LOOP);
 
-        // ── Água: y ≤ -0.12 → flutuar na superfície, sem shift ──────────────
-        const inWater = this.model.position.y <= -0.12;
-        if (inWater) {
-            if (this.currentState !== STATES.SWIMMING) {
-                this.currentState = STATES.SWIMMING;
-                this.fadeToAction('treading_water', 0.3);
-            }
-        } else if (this.currentState === STATES.SWIMMING) {
+        // ── Água: chão invisível ao nível da superfície + animação ──────────
+        const inWater = this.model.position.y <= -0.08;
+        if (inWater && this.currentState !== STATES.SWIMMING) {
+            this.currentState = STATES.SWIMMING;
+            this.fadeToAction('treading_water', 0.3);
+        } else if (!inWater && this.currentState === STATES.SWIMMING) {
             this.currentState = STATES.IDLE;
             this.fadeToAction('idle', 0.3);
         }
@@ -447,12 +445,6 @@ class Raccoon {
             this._handleMovement(delta, isRunning, input, inWater);
         } else {
             this._handleIdle(delta, inWater);
-        }
-
-        // ── Clamp de água: após física, impedir afundar abaixo da superfície ─
-        if (this.currentState === STATES.SWIMMING) {
-            this.model.position.y = -0.1;
-            this.verticalVelocity = 0;
         }
     }
 

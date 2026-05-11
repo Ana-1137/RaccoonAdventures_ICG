@@ -53,6 +53,15 @@ export async function buildWorld(scene, raccoon, onProgress = null) {
     createFish(scene);
     createFireflies(scene);
     createBirds(scene);
+
+    // ── Chão invisível ao nível da água (impede afundar no vale) ─────────────
+    const waterFloor = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.2, 9.3),
+        new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide })
+    );
+    waterFloor.rotation.x = -Math.PI / 2;
+    waterFloor.position.set(2.6, -0.1, 0);
+    scene.add(waterFloor);
     progress(85, 'Fauna criada...');
 
     // ── Flores: após floresta, mesmas zonas de exclusão ──────────────────────
