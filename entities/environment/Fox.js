@@ -115,7 +115,7 @@ export class Fox {
 
             // Collider invisível — bloqueia o raccoon sem afetar o visual
             const collider = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.18, 0.18, 0.6, 8),
+                new THREE.CylinderGeometry(0.09, 0.09, 0.5, 8),
                 new THREE.MeshBasicMaterial({ visible: false })
             );
             collider.position.set(POSITION.x, 0.3, POSITION.z);

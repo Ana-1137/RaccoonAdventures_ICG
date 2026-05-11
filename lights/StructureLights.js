@@ -63,7 +63,6 @@ function createFestoonPole(x, z, height) {
         new THREE.MeshLambertMaterial({ color: 0x5c3d1e })
     );
     mesh.position.set(x, height / 2, z);
-    mesh.raycast = () => {};  // sem colisão
     return mesh;
 }
 
@@ -209,7 +208,6 @@ export function createStructureLights(scene) {
     // ── 2. MARCADORES DE CHÃO ────────────────────────────────────────────────
     for (const cfg of groundMarkers) {
         const { group, light } = createGroundMarker(cfg.x, cfg.z);
-        group.traverse(o => { if (o.isMesh || o.isLine) o.raycast = () => {}; });
         scene.add(group);
         allLights.push(light);
     }
