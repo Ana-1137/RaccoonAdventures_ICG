@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { createGround } from './Ground.js';
-import { spawnForest }  from '../entities/environment/Forest.js';
-import { loadTent, TENT_SETTINGS }      from '../entities/environment/Tent.js';
-import { loadCampfire }  from '../entities/environment/Campfire.js';
+import { spawnForest } from '../entities/environment/Forest.js';
+import { loadTent, TENT_SETTINGS } from '../entities/environment/Tent.js';
+import { loadCampfire } from '../entities/environment/Campfire.js';
 import { loadLogBenches } from '../entities/environment/LogBench.js';
 import { loadWaterfalls, SETTINGS as WATERFALLS_SETTINGS } from '../entities/environment/Waterfalls.js';
 import { loadBoundaryWall } from '../entities/environment/BoundaryWall.js';
@@ -60,7 +60,7 @@ export async function buildWorld(scene, raccoon, onProgress = null) {
         new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide })
     );
     waterFloor.rotation.x = -Math.PI / 2;
-    waterFloor.position.set(2.6, -0.1, 0);
+    waterFloor.position.set(2.6, -0.2, 0);
     scene.add(waterFloor);
     progress(85, 'Fauna criada...');
 
