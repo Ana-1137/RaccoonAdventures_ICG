@@ -130,5 +130,6 @@ class ThirdPersonCamera {
             this.camera.position.copy(safePos);
         }
     }
+}
 
 export { ThirdPersonCamera };
