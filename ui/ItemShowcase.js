@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { loadGLTF, cloneScene } from '../../core/AssetCache.js';
-import { getAssetPath } from '../../config.js';
-import { addItem } from '../../ui/Inventory.js';
+import { loadGLTF, cloneScene } from '../core/AssetCache.js';
+import { getAssetPath } from '../config.js';
+import { addItem } from './Inventory.js';
 
 let _active = false;
 let _mesh   = null;
