@@ -27,6 +27,8 @@ const COMPLETE_LINES = [
 ];
 
 // ─── UI ──────────────────────────────────────────────────────────────────────
+const IS_TOUCH = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
+
 function _el(css) {
     const d = document.createElement('div');
     d.style.cssText = css;
@@ -40,6 +42,7 @@ const _box = _el(`
     font-size:1rem; padding:14px 22px; border-radius:10px;
     max-width:440px; text-align:center;
     border:1px solid rgba(255,255,255,0.2); display:none;
+    ${IS_TOUCH ? 'pointer-events:all; cursor:pointer;' : 'pointer-events:none;'}
 `);
 
 const _btnRow = _el(`position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:none;gap:12px;`);
@@ -56,14 +59,19 @@ const _btnNo = _btn('Não', '#e53935');
 
 const _prompt = _el(`
     position:fixed; bottom:115px; left:50%; transform:translateX(-50%);
-    background:rgba(255,255,255,0.15); color:#fff; font-family:sans-serif;
-    font-size:0.85rem; padding:6px 14px; border-radius:6px;
-    pointer-events:none; display:none;
+    background:rgba(255,255,255,${IS_TOUCH ? '0.25' : '0.15'}); color:#fff; font-family:sans-serif;
+    font-size:${IS_TOUCH ? '1rem' : '0.85rem'}; padding:${IS_TOUCH ? '10px 20px' : '6px 14px'}; border-radius:6px;
+    pointer-events:${IS_TOUCH ? 'all' : 'none'}; display:none;
+    ${IS_TOUCH ? 'cursor:pointer; border:1px solid rgba(255,255,255,0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.3);' : ''}
 `);
-_prompt.textContent = 'Pressiona [E] para falar';
+_prompt.textContent = IS_TOUCH ? '🦊 Falar com a raposa' : 'Pressiona [E] para falar';
 
 function _show(text, showBtns = false) {
-    _box.textContent = showBtns ? text : text + '  [E]';
+    if (IS_TOUCH) {
+        _box.textContent = text;
+    } else {
+        _box.textContent = showBtns ? text : text + '  [E]';
+    }
     _box.style.display = 'block';
     _btnRow.style.display = showBtns ? 'flex' : 'none';
 }
@@ -89,6 +97,18 @@ export class Fox {
 
         _btnYes.addEventListener('click', () => this._acceptQuest());
         _btnNo.addEventListener('click', () => this._declineQuest());
+
+        // Interaction listeners (pointerdown works for both touch and mouse)
+        _prompt.addEventListener('pointerdown', () => {
+            if (this._phase === 'idle') {
+                this._pendingTalk = true;
+                // Em touch, queremos disparar logo se possível
+                this._checkImmediateTalk();
+            }
+        });
+        _box.addEventListener('pointerdown', () => {
+            if (this._phase === 'chat' || this._phase === 'complete') this._advanceLine();
+        });
 
         window.addEventListener('keydown', (e) => {
             if (e.code !== 'KeyE') return;
@@ -205,6 +225,14 @@ export class Fox {
         this._play('idle');
     }
 
+    _checkImmediateTalk() {
+        if (this._lastDist !== undefined && this._lastDist < TALK_RADIUS) {
+            this._pendingTalk = false;
+            _prompt.style.display = 'none';
+            this._startConversation();
+        }
+    }
+
     _advanceLine() {
         this._lineIdx++;
         if (this._lineIdx >= this._chatLines.length) {
@@ -228,6 +256,7 @@ export class Fox {
         const dx = playerPos.x - POSITION.x;
         const dz = playerPos.z - POSITION.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
+        this._lastDist = dist;
 
         const inDialogue = this._phase === 'quest' || this._phase === 'chat' || this._phase === 'complete';
 
