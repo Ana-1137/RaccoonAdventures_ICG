@@ -24,7 +24,7 @@ _hint.textContent = 'Clica para guardar 🌸';
 _overlay.appendChild(_hint);
 document.body.appendChild(_overlay);
 
-export async function startShowcase(scene, camera, orbitControls, itemId, itemName, itemIcon, _unused = null, onClose = null) {
+export async function startShowcase(scene, camera, orbitControls, itemId, itemName, itemIcon, itemDescription = null, onClose = null) {
     if (_active) return;
     _active = true;
     _camera = camera;
@@ -47,10 +47,10 @@ export async function startShowcase(scene, camera, orbitControls, itemId, itemNa
     camera.lookAt(SHOWCASE_POS);
 
     _overlay.style.display = 'flex';
-    _hint.onclick = () => _close(scene, itemId, itemName, itemIcon);
+    _hint.onclick = () => _close(scene, itemId, itemName, itemIcon, itemDescription);
 }
 
-function _close(scene, itemId, itemName, itemIcon) {
+function _close(scene, itemId, itemName, itemIcon, itemDescription) {
     if (!_active) return;
     _active = false;
     scene.remove(_mesh);
@@ -62,7 +62,7 @@ function _close(scene, itemId, itemName, itemIcon) {
         _camera.quaternion.copy(_savedCamQuat);
         _savedCamPos = null; _savedCamQuat = null;
     }
-    addItem(itemId, itemName, itemIcon);
+    addItem(itemId, itemName, itemIcon, itemDescription);
     if (_onClose) { _onClose(); _onClose = null; }
 }
 

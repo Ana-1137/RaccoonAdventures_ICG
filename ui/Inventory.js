@@ -48,9 +48,11 @@ function _render() {
     _grid.innerHTML = _items.map(item => `
         <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.07);">
             <span style="font-size:2rem;">${item.icon}</span>
-            <div>
+            <div style="flex:1;">
                 <div style="font-size:1rem;font-weight:bold;">${item.name}</div>
-                <div style="font-size:.8rem;color:#aaa;">x${item.qty}</div>
+                <div style="font-size:.8rem;color:#aaa;line-height:1.2;">
+                    ${item.description ? item.description : 'x' + item.qty}
+                </div>
             </div>
         </div>
     `).join('');
@@ -59,10 +61,14 @@ function _render() {
 // ─── API ─────────────────────────────────────────────────────────────────────
 
 /** Adiciona ou incrementa um item no inventário. */
-export function addItem(id, name, icon) {
+export function addItem(id, name, icon, description = null) {
     const existing = _items.find(i => i.id === id);
-    if (existing) { existing.qty++; }
-    else { _items.push({ id, name, icon, qty: 1 }); }
+    if (existing) {
+        existing.qty++;
+        if (description) existing.description = description;
+    } else {
+        _items.push({ id, name, icon, qty: 1, description });
+    }
     if (_open) _render();
 }
 

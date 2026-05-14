@@ -110,8 +110,8 @@ raccoon.modelLoaded.then(async () => {
     // Recompensa da missão — disparada pela Fox quando o diálogo de conclusão termina
     fox.onMissionComplete(() => {
         playUnlock();
-        const foxWorldPos = new THREE.Vector3(FOX_POSITION.x, FOX_POSITION.y, FOX_POSITION.z);
-        startShowcase(scene, camera, orbitControls, 'flower_reward', 'Flor Especial', '🌺', foxWorldPos);
+        const rewardMsg = "Um presente da raposa por ajudares a encontrar flores para a sua companheira. 🦊🌸";
+        startShowcase(scene, camera, orbitControls, 'flower_reward', 'Flor Especial', '🌺', rewardMsg);
     });
 
     const clock = new THREE.Clock();
