@@ -23,7 +23,7 @@ const SETTINGS = {
 };
 
 // ─── GEOMETRIA ───────────────────────────────────────────────────────────────
-function createFishMesh() {
+export function createFishMesh() {
     const bodyColor = 0xf4a460;
     const finColor  = 0xe07840;
     const group = new THREE.Group();
@@ -70,13 +70,19 @@ function createFishMesh() {
     // Barbatana peitoral
     const pectShape = new THREE.Shape();
     pectShape.absellipse(0, 0, 0.015, 0.008, 0, Math.PI * 2);
-    const pectoral = new THREE.Mesh(
-        new THREE.ExtrudeGeometry(pectShape, { depth: 0.003, bevelEnabled: false }),
-        new THREE.MeshLambertMaterial({ color: finColor })
-    );
-    pectoral.position.set(0.010, -bH * 0.3, depth / 2);
-    pectoral.rotation.x = Math.PI / 6;
-    group.add(pectoral);
+    const pectGeo = new THREE.ExtrudeGeometry(pectShape, { depth: 0.003, bevelEnabled: false });
+    const pectMat = new THREE.MeshLambertMaterial({ color: finColor });
+
+    const pectoralR = new THREE.Mesh(pectGeo, pectMat);
+    pectoralR.position.set(0.010, -bH * 0.3, depth / 2);
+    pectoralR.rotation.x = Math.PI / 6;
+    group.add(pectoralR);
+
+    const pectoralL = new THREE.Mesh(pectGeo, pectMat);
+    pectoralL.position.set(0.010, -bH * 0.3, -depth / 2);
+    pectoralL.scale.z = -1; // espelha
+    pectoralL.rotation.x = Math.PI / 6;
+    group.add(pectoralL);
 
     // Olho + guelra — frente e trás
     const eyeMat   = new THREE.MeshBasicMaterial({ color: 0x111111 });

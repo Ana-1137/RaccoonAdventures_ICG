@@ -23,42 +23,69 @@ const SETTINGS = {
 const _birds = [];
 let _currentOpacity = 1;
 
-function createBirdMesh(color) {
+export function createBirdMesh(color) {
     const group = new THREE.Group();
+    const meshGroup = new THREE.Group();
+    meshGroup.rotation.y = Math.PI / 2; // Rodar para que o -X (peito) aponte para +Z (frente)
+    group.add(meshGroup);
+
     const mat = new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+    const beakMat = new THREE.MeshLambertMaterial({ color: 0xddaa00 });
 
-    // ── Corpo: cone deitado no eixo X (peito → -X, cauda → +X) ─────────────
-    const body = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.38, 5), mat);
-    body.rotation.z = Math.PI / 2;
-    group.add(body);
+    // ── Corpo: elipse com volume (esfera escalada) ─────────────
+    // Peito -> -X, cauda -> +X
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), mat);
+    body.scale.set(1.5, 0.8, 0.8); // alongado no eixo X
+    meshGroup.add(body);
 
-    // ── Cabeça: tetraedro na frente ──────────────────────────────────────────
-    const head = new THREE.Mesh(new THREE.TetrahedronGeometry(0.065), mat);
-    head.position.x = -0.22;
-    group.add(head);
+    // ── Cabeça: esfera ──────────────────────────────────────────
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), mat);
+    head.position.set(-0.20, 0.05, 0);
+    meshGroup.add(head);
 
-    // ── Asas: PlaneGeometry achatada no plano XZ (horizontal) ───────────────
-    // Pivot no ombro — a asa desloca-se para o lado dentro do pivot
-    // O batimento é rotation.x do pivot (roda a asa para cima/baixo)
-    const wingGeo = new THREE.PlaneGeometry(0.28, 0.10);
-    // Deslocar vértices para que a base fique no pivot (z=0) e a ponta vá para fora
-    const pos = wingGeo.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-        pos.setZ(i, pos.getZ(i) + 0.14); // desloca +Z para fora do pivot
-    }
-    pos.needsUpdate = true;
-    wingGeo.rotateX(-Math.PI / 2); // deitar no plano XZ
+    // ── Olhos: duas esferas ─────────────────────────────────────
+    // Puxados mais para fora para não ficarem dentro da cabeça
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), eyeMat);
+    eyeL.position.set(-0.26, 0.085, 0.06);
+    meshGroup.add(eyeL);
+
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), eyeMat);
+    eyeR.position.set(-0.26, 0.085, -0.06);
+    meshGroup.add(eyeR);
+
+    // ── Bico: cone ──────────────────────────────────────────────
+    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.08, 8), beakMat);
+    beak.rotation.z = Math.PI / 2; // Apontar para -X
+    beak.position.set(-0.30, 0.04, 0);
+    meshGroup.add(beak);
+
+    // ── Rabo: elipse preenchida mais achatada ───────────────────
+    const tail = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), mat);
+    tail.scale.set(1.0, 0.2, 0.8);
+    tail.position.set(0.20, 0, 0);
+    meshGroup.add(tail);
+
+    // ── Asas: prismas quadrangulares (CylinderGeometry com 4 lados)
+    // base maior no corpo, ponta mais pequena.
+    const wingGeo = new THREE.CylinderGeometry(0.02, 0.08, 0.3, 4);
+    wingGeo.rotateY(Math.PI / 4); // alinhar as faces planas com os eixos
+    wingGeo.rotateX(Math.PI / 2); // deitar ao longo do Z (ponta no +Z, base no -Z)
+    wingGeo.translate(0, 0, 0.15); // transladar para que a base fique no 0
+    wingGeo.scale(1, 0.15, 1); // achatar no Y para parecer uma asa
 
     const pivotL = new THREE.Group();
     const wingL = new THREE.Mesh(wingGeo, mat);
     pivotL.add(wingL);
-    group.add(pivotL);
+    pivotL.position.set(0, 0.05, 0.08); 
+    meshGroup.add(pivotL);
 
     const pivotR = new THREE.Group();
     const wingR = new THREE.Mesh(wingGeo.clone(), mat);
-    wingR.scale.z = -1;             // espelha para o lado oposto
+    wingR.scale.z = -1; // espelhar para o outro lado
     pivotR.add(wingR);
-    group.add(pivotR);
+    pivotR.position.set(0, 0.05, -0.08);
+    meshGroup.add(pivotR);
 
     return { group, pivotL, pivotR };
 }

@@ -1,7 +1,11 @@
 import GUI from 'lil-gui';
+import * as THREE from 'three';
 import { setRainIntensity } from '../world/Rain.js';
 import { setAudioEnabled, setMasterVolume, setAmbientVolume, setEffectsVolume,
          getMasterVolume, getAmbientVolume, getEffectsVolume } from '../world/SoundManager.js';
+import { setQuestActive, cheatCollectAll } from '../entities/environment/Flowers.js';
+import { createBirdMesh } from '../entities/environment/Birds.js';
+import { createFishMesh } from '../entities/environment/Fish.js';
 
 /**
  * Cria e configura o painel de controlo lil-GUI.
@@ -19,6 +23,7 @@ function createDashboard(climate, campfire, structureLights, scene) {
     _buildClimaFolder(gui, scene);
     _buildSoundFolder(gui);
     _buildPerformanceFolder(gui);
+    _buildDebugFolder(gui, scene);
 
     return gui;
 }
@@ -140,6 +145,72 @@ function _buildPerformanceFolder(gui) {
     // Guardar no objeto global para acesso em main.js
     gui._fpsDisplay = fpsDisplay;
     return fpsDisplay;
+}
+
+/**
+ * Pasta de debug: cheats e visualização de modelos individuais.
+ * @param {GUI}         gui
+ * @param {THREE.Scene} scene
+ */
+function _buildDebugFolder(gui, scene) {
+    const folder = gui.addFolder('🐛 Debug');
+
+    // ── Cheat: apanhar todas as flores ───────────────────────────────────────
+    const debugState = { collectAll: false, showBird: false, showFish: false };
+    let birdModel = null;
+    let fishModel = null;
+
+    folder
+        .add(debugState, 'collectAll')
+        .name('Apanhar todas as flores')
+        .onChange((value) => {
+            if (value) {
+                setQuestActive(true);
+                cheatCollectAll();
+            }
+        });
+
+    // ── Modelo pássaro ───────────────────────────────────────────────────────
+    folder
+        .add(debugState, 'showBird')
+        .name('Modelo pássaro')
+        .onChange((value) => {
+            if (value) {
+                if (!birdModel) {
+                    const { group } = createBirdMesh(0x4a6fa5);
+                    group.position.set(0, 0.2, 1.8);
+                    group.scale.setScalar(2);
+                    group.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
+                    scene.add(group);
+                    birdModel = group;
+                } else {
+                    birdModel.visible = true;
+                }
+            } else if (birdModel) {
+                birdModel.visible = false;
+            }
+        });
+
+    // ── Modelo peixe ─────────────────────────────────────────────────────────
+    folder
+        .add(debugState, 'showFish')
+        .name('Modelo peixe')
+        .onChange((value) => {
+            if (value) {
+                if (!fishModel) {
+                    const group = createFishMesh();
+                    group.position.set(-1, 0.2, 1.8);
+                    group.scale.setScalar(4);
+                    group.traverse(o => { if (o.isMesh || o.isLine) o.raycast = () => {}; });
+                    scene.add(group);
+                    fishModel = group;
+                } else {
+                    fishModel.visible = true;
+                }
+            } else if (fishModel) {
+                fishModel.visible = false;
+            }
+        });
 }
 
 export { createDashboard };
