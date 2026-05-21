@@ -32,6 +32,12 @@ let _enabled = true;
 export async function initSounds() {
     if (_ctx) return;
     _ctx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // CRÍTICO PARA MOBILE: O iOS/Android inicia o contexto como "suspended"
+    // É obrigatório chamar o resume() sincronicamente no evento de touch!
+    if (_ctx.state === 'suspended') {
+        _ctx.resume();
+    }
 
     _masterGain = _ctx.createGain();
     _ambientGain = _ctx.createGain();
