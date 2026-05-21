@@ -7,9 +7,9 @@ const SETTINGS = {
     // └─────────────────────────────────────────────────────────────────────────┘
     waterfall: {
         position: { x: 3.0, y: 1.8, z: -4.5 },   // Posição 3D
-        size:     { w: 3.0, h: 3.8 },              // Dimensões (largura x altura)
-        color:    0x5ca3d4,                        // Cor da água
-        opacity:  0.65,                            // Transparência (0-1)
+        size: { w: 3.0, h: 3.8 },              // Dimensões (largura x altura)
+        color: 0x5ca3d4,                        // Cor da água
+        opacity: 0.65,                            // Transparência (0-1)
         roughness: 0.1,                            // Material: áspero para cascata
         metalness: 0.15,                           // Material: reflexividade
     },
@@ -19,12 +19,12 @@ const SETTINGS = {
     // └─────────────────────────────────────────────────────────────────────────┘
     basin: {
         position: { x: 2.6, y: -0.1, z: 0 },      // Posição 3D
-        size:     { w: 3.2, h: 9.3 },              // Dimensões (largura x comprimento)
-        color:    0x5ca3d4,                        // Cor da água
-        opacity:  0.6,                             // Transparência (0-1)
+        size: { w: 3.2, h: 9.3 },              // Dimensões (largura x comprimento)
+        color: 0x5ca3d4,                        // Cor da água
+        opacity: 0.6,                             // Transparência (0-1)
         segments: 64,                              // Resolução (mais = mais realista)
-        waveAmplitude: 0.03,                        // Altura das ondas (0-1)
-        waveSpeed: 0.7,                            // Velocidade (0-2, mais baixo = mais calmo)
+        waveAmplitude: 0.05,                       // Altura das ondas (0-1) -> AUMENTADO (era 0.03)
+        waveSpeed: 1.0,                            // Velocidade (0-2) -> AUMENTADO (era 0.7)
         roughness: 0.2,                            // Material: superfície
         metalness: 0.3,                            // Material: reflexo
     },
@@ -54,7 +54,7 @@ export async function createWater(scene) {
     // ═══════════════════════════════════════════════════════════════════════════
     //  ÁGUA 1: CASCATA (VERTICAL)
     // ═══════════════════════════════════════════════════════════════════════════
-    
+
     const waterfallGeo = new THREE.PlaneGeometry(
         SETTINGS.waterfall.size.w,
         SETTINGS.waterfall.size.h,
@@ -62,12 +62,12 @@ export async function createWater(scene) {
     );
 
     const waterfallMat = new THREE.MeshStandardMaterial({
-        color:       SETTINGS.waterfall.color,
+        color: SETTINGS.waterfall.color,
         transparent: true,
-        opacity:     SETTINGS.waterfall.opacity,
-        roughness:   SETTINGS.waterfall.roughness,
-        metalness:   SETTINGS.waterfall.metalness,
-        side:        THREE.DoubleSide,
+        opacity: SETTINGS.waterfall.opacity,
+        roughness: SETTINGS.waterfall.roughness,
+        metalness: SETTINGS.waterfall.metalness,
+        side: THREE.DoubleSide,
     });
 
     const waterfall = new THREE.Mesh(waterfallGeo, waterfallMat);
@@ -78,14 +78,14 @@ export async function createWater(scene) {
     );
     waterfall.rotation.y = 0;
     waterfall.receiveShadow = true;
-    waterfall.raycast = () => {};
-    
+    waterfall.raycast = () => { };
+
     scene.add(waterfall);
 
     // ═══════════════════════════════════════════════════════════════════════════
     //  ÁGUA 2: VALE (HORIZONTAL — VERTEX DEFORMATION COM ONDAS SUAVES)
     // ═══════════════════════════════════════════════════════════════════════════
-    
+
     const basinGeo = new THREE.PlaneGeometry(
         SETTINGS.basin.size.w,
         SETTINGS.basin.size.h,
@@ -97,13 +97,13 @@ export async function createWater(scene) {
     const originalPositions = new Float32Array(basinGeo.attributes.position.array);
 
     const basinMat = new THREE.MeshStandardMaterial({
-        color:       SETTINGS.basin.color,
+        color: SETTINGS.basin.color,
         transparent: true,
-        opacity:     SETTINGS.basin.opacity,
-        roughness:   SETTINGS.basin.roughness,
-        metalness:   SETTINGS.basin.metalness,
-        side:        THREE.DoubleSide,
-        wireframe:   false,
+        opacity: SETTINGS.basin.opacity,
+        roughness: SETTINGS.basin.roughness,
+        metalness: SETTINGS.basin.metalness,
+        side: THREE.DoubleSide,
+        wireframe: false,
     });
 
     const basin = new THREE.Mesh(basinGeo, basinMat);
@@ -113,13 +113,13 @@ export async function createWater(scene) {
         SETTINGS.basin.position.z
     );
     basin.rotation.x = -Math.PI / 2;
-    basin.raycast = () => {};
-    
+    basin.raycast = () => { };
+
     // Guardar dados para animação
     basin.userData.originalPositions = originalPositions;
     basin.userData.geometry = basinGeo;
     basin.userData.time = 0;  // Inicializar time no userData do mesh
-    
+
     scene.add(basin);
 
     return { waterfall, basin };
@@ -133,7 +133,7 @@ export async function createWater(scene) {
  */
 export function updateWater(basinMesh, deltaTime = 0.016) {
     if (!basinMesh || !basinMesh.userData.originalPositions || !basinMesh.userData.geometry) return;
-    
+
     // Atualizar tempo armazenado no userData do mesh
     basinMesh.userData.time += deltaTime * SETTINGS.basin.waveSpeed;
 

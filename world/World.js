@@ -39,7 +39,7 @@ export async function buildWorld(scene, raccoon, onProgress = null) {
 
     // ── Elementos assíncronos em paralelo ────────────────────────────────────
     progress(15, 'A carregar elementos...');
-    const [forest, tent, campfire, logBenches, waterfalls, { waterfall, basin }] = await Promise.all([
+    const [forest, tent, campfire, logBenches, waterfalls, boundaryWall, { waterfall, basin }] = await Promise.all([
         spawnForest(scene, raccoon, { exclusionZones }),
         loadTent(scene),
         loadCampfire(scene),
