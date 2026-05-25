@@ -175,13 +175,18 @@ RaccoonAdventures_ICG/
 
 | Tecnologia | Versão | Utilização |
 |------------|--------|------------|
-| **Three.js** | r160 | Motor 3D (cena, câmara, renderer, luzes, materiais) |
+| **Three.js** | r184 | Motor 3D (cena, câmara, renderer, luzes, materiais) |
 | **lil-gui** | 0.18.0 | Dashboard de controlo interativo |
 | **FBXLoader** | Three.js addon | Carregamento de modelos animados (Raccoon, Fox) |
 | **GLTFLoader** | Three.js addon | Carregamento de modelos estáticos (árvores, tenda, etc.) |
 | **OrbitControls** | Three.js addon | Controlo de câmara com rato |
 | **Web Audio API** | Nativa | Sistema de áudio espacial |
 | **ES Modules** | Nativo | Organização modular do código (sem bundler) |
+
+### ⚠️ Nota sobre a Versão do Three.js (r160 → r184)
+O projeto foi inicialmente construído e fixado na versão **r160** (`0.160.0`). A decisão de fixar a versão através de um *import map* foi tomada para garantir total estabilidade e compatibilidade com os guiões e exemplos lecionados nas aulas, prevenindo que o projeto "partisse" de um dia para o outro devido a atualizações constantes da biblioteca (que introduzem frequentemente *breaking changes*).
+
+Posteriormente (alteração efetuada após a apresentação), o projeto foi validado e atualizado para a versão **r184** (`0.184.0`), acompanhando os desenvolvimentos mais recentes da UC e usufruindo das mais recentes otimizações internas do motor, sem impacto negativo no funcionamento da aplicação.
 
 ## Documentação
 
@@ -195,6 +200,8 @@ RaccoonAdventures_ICG/
 
 ### 🎓 Entrega Final
 - [Guião de Apresentação](./extra/Guidelines_and_Slides_Skeleton.pdf) — Skeleton dos slides
+- [Apresentação Final](./extra/Final%20Raccoon%20Adventures.pdf) — Slides da apresentação final
+- [Vídeo Demo](https://youtu.be/qsZUAlynYQ8) — Demonstração do projeto
 
 ## Uso de IA
 
